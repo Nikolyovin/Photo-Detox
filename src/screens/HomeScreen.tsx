@@ -17,7 +17,8 @@ interface HomeScreenProps {
   isLoading: boolean
   hasPermission: boolean
   askPermission: () => void
-  onStartCleaning: (photos: Asset[]) => void // Коллбэк для перехода к свайпам
+  onStartCleaning: (photos: Asset[]) => void
+  onOpenTrash: () => void // <-- Добавлен пропс
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
@@ -26,6 +27,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   hasPermission,
   askPermission,
   onStartCleaning,
+  onOpenTrash, // <-- Добавлено сюда
 }) => {
   const [activeTab, setActiveTab] = useState<FilterType>('all')
 
@@ -50,7 +52,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     )
   }
 
-  // Фильтруем фото в зависимости от вкладки
   const displayedPhotos =
     activeTab === 'all' ? allPhotos : allPhotos.filter(isScreenshot)
 
@@ -64,7 +65,19 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         allCount={allPhotos.length}
         screenshotsCount={screenshotsCount}
       />
-
+      <View
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          paddingHorizontal: 20,
+          marginBottom: 10,
+        }}
+      >
+        <Text style={{ fontSize: 20, fontWeight: 'bold' }}>Галерея</Text>
+        <TouchableOpacity onPress={onOpenTrash}>
+          <Text style={{ color: '#007AFF', fontSize: 16 }}>Корзина</Text>
+        </TouchableOpacity>
+      </View>
       <PhotoGrid photos={displayedPhotos} />
 
       {displayedPhotos.length > 0 && (
@@ -82,22 +95,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    paddingTop: 50,
-  },
+  container: { flex: 1, backgroundColor: '#fff', paddingTop: 50 },
   center: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
+  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 10 },
   subtitle: {
     fontSize: 16,
     color: '#666',
@@ -118,9 +123,5 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 5,
   },
-  fabText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
+  fabText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
 })
