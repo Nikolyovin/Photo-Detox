@@ -1,97 +1,103 @@
-import { useState, useEffect } from 'react'
-import AsyncStorage from '@react-native-async-storage/async-storage'
-import { Asset } from '../types'
-import * as MediaLibrary from 'expo-media-library'
+// src/screens/TrashScreen.tsx
+import React from 'react'
+import {
+  View,
+  Text,
+  FlatList,
+  Image,
+  TouchableOpacity,
+  StyleSheet,
+  Dimensions,
+  Alert, // <-- Добавили импорт
+} from 'react-native'
+import { useTrash } from '../hooks/useTrash'
 
-const TRASH_KEY = '@photo_detox_trash'
+const { width } = Dimensions.get('window')
+const numColumns = 3
+const imageSize = width / numColumns
 
-export interface TrashItem {
-  photo: Asset
-  uri: string // Сохраняем URI отдельно, так как в новых версиях Asset его нет напрямую
-  deletedAt: number
+interface TrashScreenProps {
+  onBack: () => void
 }
 
-export const useTrash = () => {
-  const [trash, setTrash] = useState<TrashItem[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+export const TrashScreen: React.FC<TrashScreenProps> = ({ onBack }) => {
+  const { trash, removeFromTrash, emptyTrash } = useTrash()
 
-  useEffect(() => {
-    loadTrash()
-  }, [])
+  // Функция для показа окна подтверждения
+  const handleClearTrash = () => {
+    Alert.alert(
+      "Очистить корзину?",
+      "Эти фотографии будут удалены из галереи навсегда. Это действие нельзя отменить.",
+      [
+        { text: "Отмена", style: "cancel" },
+        { text: "Удалить", style: "destructive", onPress: () => emptyTrash() }
+      ]
+    );
+  };
 
-  const loadTrash = async () => {
-    try {
-      const data = await AsyncStorage.getItem(TRASH_KEY)
-      if (data) {
-        setTrash(JSON.parse(data))
-      }
-    } catch (e) {
-      console.error('Ошибка загрузки корзины', e)
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={onBack}>
+          <Text style={styles.backButton}>← Назад</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerText}>Корзина ({trash.length})</Text>
+        
+        {trash.length > 0 && (
+          <TouchableOpacity onPress={handleClearTrash}>
+            <Text style={styles.clearButton}>Очистить</Text>
+          </TouchableOpacity>
+        )}
+      </View>
 
-  const saveTrash = async (newTrash: TrashItem[]) => {
-    try {
-      setTrash(newTrash)
-      await AsyncStorage.setItem(TRASH_KEY, JSON.stringify(newTrash))
-    } catch (e) {
-      console.error('Ошибка сохранения корзины', e)
-    }
-  }
-
-  const addToTrash = async (photo: Asset) => {
-    try {
-      // В новых версиях expo-media-library URI получается асинхронно
-      // Если метод getUri недоступен, используем fallback (на случай старых версий)
-      let photoUri = ''
-      if (typeof (photo as any).getUri === 'function') {
-        photoUri = await (photo as any).getUri()
-      } else if ((photo as any).uri) {
-        photoUri = (photo as any).uri
-      }
-
-      const newItem: TrashItem = {
-        photo,
-        uri: photoUri,
-        deletedAt: Date.now(),
-      }
-
-      const newTrash = [newItem, ...trash]
-      await saveTrash(newTrash)
-    } catch (e) {
-      console.error('Ошибка при добавлении в корзину', e)
-    }
-  }
-
-  const removeFromTrash = async (photoId: string) => {
-    const newTrash = trash.filter((item) => item.photo.id !== photoId)
-    await saveTrash(newTrash)
-  }
-
-  const emptyTrash = async () => {
-    try {
-      const assetIds = trash.map((item) => item.photo.id)
-
-      if (assetIds.length > 0) {
-        const { status } = await MediaLibrary.requestPermissionsAsync()
-        if (status === 'granted') {
-          await MediaLibrary.deleteAssetsAsync(assetIds)
-        }
-      }
-
-      await saveTrash([])
-    } catch (error) {
-      console.error('Ошибка при физическом удалении:', error)
-    }
-  }
-
-  return {
-    trash,
-    isLoading,
-    addToTrash,
-    removeFromTrash,
-    emptyTrash,
-  }
+      {trash.length === 0 ? (
+        <View style={styles.center}>
+          <Text style={styles.emptyText}>Корзина пуста</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={trash}
+          keyExtractor={(item, index) => (item.photo as any).id || index.toString()}
+          numColumns={numColumns}
+          renderItem={({ item }) => (
+            <View style={{ width: imageSize, height: imageSize, padding: 2 }}>
+              <Image source={{ uri: item.uri }} style={styles.image} />
+              <TouchableOpacity
+                style={styles.restoreButton}
+                onPress={() => removeFromTrash((item.photo as any).id)}
+              >
+                <Text style={styles.restoreText}>↩</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        />
+      )}
+    </View>
+  )
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#fff', paddingTop: 50 },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  backButton: { fontSize: 18, color: '#007AFF', fontWeight: '500' },
+  headerText: { fontSize: 18, fontWeight: 'bold', color: '#333' },
+  clearButton: { fontSize: 16, color: '#FF3B30', fontWeight: '500' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  emptyText: { fontSize: 18, color: '#888' },
+  image: { width: '100%', height: '100%', borderRadius: 8 },
+  restoreButton: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    padding: 5,
+    borderRadius: 15,
+  },
+  restoreText: { color: '#fff', fontSize: 14 },
+})

@@ -14,16 +14,22 @@ export const CleanScreen: React.FC<CleanScreenProps> = ({
   initialPhotos,
   onFinish,
 }) => {
-  const [photos, setPhotos] = useState<Asset[]>(initialPhotos)
+  // Фильтруем пустые объекты на всякий случай
+  const [photos, setPhotos] = useState<Asset[]>(
+    initialPhotos.filter((p) => p != null)
+  )
   const { addToTrash } = useTrash()
 
-  const handleSwipeLeft = (photo: Asset) => {
-    addToTrash(photo) // Отправляем в корзину
-    setPhotos((prev) => prev.filter((p) => p.id !== photo.id))
+  const handleSwipeLeft = () => {
+    const currentPhoto = photos[0]
+    if (currentPhoto) {
+      addToTrash(currentPhoto) // Отправляем в корзину
+    }
+    setPhotos((prev) => prev.slice(1)) // Удаляем первую карточку
   }
 
-  const handleSwipeRight = (photo: Asset) => {
-    setPhotos((prev) => prev.filter((p) => p.id !== photo.id))
+  const handleSwipeRight = () => {
+    setPhotos((prev) => prev.slice(1)) // Просто удаляем первую карточку
   }
 
   if (photos.length === 0) {
@@ -48,19 +54,13 @@ export const CleanScreen: React.FC<CleanScreenProps> = ({
 
       <View style={styles.cardsContainer}>
         {photos.map((photo, index) => {
-          if (index > 1) return null
+          // Показываем только первую карточку
+          if (index > 0) return null
+
           return (
-            <View
-              key={photo.id}
-              style={[
-                styles.cardWrapper,
-                {
-                  zIndex: photos.length - index,
-                  transform: [{ scale: 1 - index * 0.05 }],
-                },
-              ]}
-            >
+            <View key={index.toString()} style={styles.cardWrapper}>
               <SwipeCard
+               key={(photo as any).uri || index.toString()} 
                 photo={photo}
                 onSwipeLeft={handleSwipeLeft}
                 onSwipeRight={handleSwipeRight}

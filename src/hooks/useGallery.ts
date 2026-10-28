@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
-// В версии 18.2.1 старый API лежит прямо в корне
 import * as MediaLibrary from 'expo-media-library'
-import { Asset } from 'expo-media-library'
+import { Asset, Query, AssetField, MediaType } from 'expo-media-library'
 import { filterPhotos } from '../utils/mediaUtils'
 
 export const useGallery = () => {
@@ -9,37 +8,40 @@ export const useGallery = () => {
   const [hasPermission, setHasPermission] = useState<boolean>(false)
   const [isLoading, setIsLoading] = useState<boolean>(true)
 
-  const loadPhotos = async () => {
-    setIsLoading(true)
-    try {
-      // Старый метод getAssetsAsync работает в версии 18.2.1
-      const { assets } = await MediaLibrary.getAssetsAsync({
-        first: 500,
-        mediaType: 'photo',
-        sortBy: 'creationTime',
-      })
-      setAllPhotos(assets)
-    } catch (error) {
-      console.error('Ошибка загрузки фото:', error)
-    } finally {
+  const askPermission = async () => {
+    const { status } = await MediaLibrary.requestPermissionsAsync()
+    if (status === 'granted') {
+      setHasPermission(true)
+      await loadPhotos()
+    } else {
       setIsLoading(false)
     }
   }
 
-  const askPermission = async () => {
-    const { status: currentStatus } = await MediaLibrary.getPermissionsAsync()
-    if (currentStatus === 'granted') {
-      setHasPermission(true)
-      await loadPhotos()
-      return
-    }
+  const loadPhotos = async () => {
+    setIsLoading(true)
+    try {
+      const assets = await new Query()
+        .eq(AssetField.MEDIA_TYPE, MediaType.IMAGE)
+        .limit(500)
+        .orderBy({ key: AssetField.CREATION_TIME, ascending: false })
+        .exe()
 
-    const { status: newStatus } = await MediaLibrary.requestPermissionsAsync()
-    if (newStatus === 'granted') {
-      setHasPermission(true)
-      await loadPhotos()
-    } else {
-      setHasPermission(false)
+      // Обогащаем каждый объект Asset готовым URI
+      const assetsWithUri = await Promise.all(
+        assets.map(async (asset) => {
+          let uri = (asset as any).uri;
+          if (!uri && typeof (asset as any).getUri === 'function') {
+            uri = await (asset as any).getUri();
+          }
+          return { ...asset, uri }; // Возвращаем копию с добавленным полем uri
+        })
+      );
+
+      setAllPhotos(assetsWithUri as unknown as Asset[])
+    } catch (error) {
+      console.error('Ошибка загрузки фото:', error)
+    } finally {
       setIsLoading(false)
     }
   }

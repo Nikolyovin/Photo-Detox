@@ -1,24 +1,13 @@
-import { Asset } from '../types'
+// src/utils/mediaUtils.ts
+import { Asset } from 'expo-media-library'
 
-export const isScreenshot = (photo: Asset): boolean => {
-  const filename = photo.filename.toLowerCase()
-  // Проверяем имя файла
-  if (filename.includes('screenshot') || filename.includes('screencap')) {
-    return true
-  }
-
-  // На Android скриншоты часто лежат в папке с "Screenshots" в URI
-  if (photo.uri.toLowerCase().includes('screenshot')) {
-    return true
-  }
-
-  return false
+export const isScreenshot = (photo: any): boolean => {
+  const filename = photo.filename || '';
+  if (typeof filename !== 'string') return false;
+  return filename.toLowerCase().includes('screenshot') || filename.toLowerCase().includes('screencap');
 }
 
-export const filterPhotos = (
-  photos: Asset[],
-  filter: 'all' | 'screenshots',
-): Asset[] => {
-  if (filter === 'all') return photos
-  return photos.filter(isScreenshot)
+export const filterPhotos = (photos: Asset[], filter: 'all' | 'screenshots'): Asset[] => {
+  if (filter === 'all') return photos;
+  return photos.filter(isScreenshot);
 }

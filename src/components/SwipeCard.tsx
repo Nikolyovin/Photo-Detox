@@ -14,8 +14,8 @@ const SWIPE_THRESHOLD = width * 0.25 // Порог срабатывания св
 
 interface SwipeCardProps {
   photo: Asset
-  onSwipeLeft: (photo: Asset) => void // Удалить
-  onSwipeRight: (photo: Asset) => void // Оставить
+  onSwipeLeft: () => void // Удалить
+  onSwipeRight: () => void // Оставить
 }
 
 export const SwipeCard: React.FC<SwipeCardProps> = ({
@@ -33,20 +33,18 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({
       translateY.value = event.translationY
     })
     .onEnd((event) => {
-      // Если свайпнули вправо дальше порога
-      if (event.translationX > SWIPE_THRESHOLD) {
-        translateX.value = withSpring(width * 1.5)
-        runOnJS(onSwipeRight)(photo)
-      }
-      // Если свайпнули влево дальше порога
+        if (event.translationX > SWIPE_THRESHOLD) {
+        translateX.value = withSpring(width * 1.5);
+        // Передаем пустой вызов, без photo!
+        runOnJS(onSwipeRight)(); 
+      } 
       else if (event.translationX < -SWIPE_THRESHOLD) {
-        translateX.value = withSpring(-width * 1.5)
-        runOnJS(onSwipeLeft)(photo)
-      }
-      // Если свайп был слабый, возвращаем карточку на место
+        translateX.value = withSpring(-width * 1.5);
+        runOnJS(onSwipeLeft)();
+      } 
       else {
-        translateX.value = withSpring(0)
-        translateY.value = withSpring(0)
+        translateX.value = withSpring(0);
+        translateY.value = withSpring(0);
       }
     })
 
@@ -68,11 +66,11 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({
     <View style={styles.cardContainer}>
       <GestureDetector gesture={panGesture}>
         <Animated.View style={[styles.card, animatedStyle]}>
-          <Image
-            source={{ uri: photo.uri }}
-            style={styles.image}
-            resizeMode='cover'
-          />
+          <Image 
+  source={{ uri: (photo as any).uri }} 
+  style={styles.image} 
+  resizeMode="cover" 
+/>
 
           {/* Визуальная подсказка (можно стилизовать под "Оставить" / "Удалить") */}
           <View style={styles.hintContainer}>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Asset } from '../types'
-import * as MediaLibrary from 'expo-media-library'
+import * as LegacyMediaLibrary from 'expo-media-library/legacy'
 
 const TRASH_KEY = '@photo_detox_trash'
 
@@ -41,35 +41,57 @@ export const useTrash = () => {
     }
   }
 
-  const addToTrash = (photo: Asset) => {
-    const newItem: TrashItem = { photo, deletedAt: Date.now(), uri: photo.uri }
-    const newTrash = [newItem, ...trash]
-    saveTrash(newTrash)
+  const addToTrash = async (photo: Asset) => {
+    try {
+      let photoUri = (photo as any).uri;
+      if (!photoUri && typeof (photo as any).getUri === 'function') {
+        photoUri = await (photo as any).getUri();
+      }
+
+      const newItem: TrashItem = { 
+        photo, 
+        uri: photoUri || '', 
+        deletedAt: Date.now() 
+      }
+      
+      const newTrash = [newItem, ...trash]
+      await saveTrash(newTrash)
+    } catch (e) {
+      console.error('Ошибка при добавлении в корзину', e)
+    }
   }
 
   const removeFromTrash = (photoId: string) => {
-    const newTrash = trash.filter((item) => item.photo.id !== photoId)
+    const newTrash = trash.filter((item) => {
+      const photo = item.photo as any;
+      const id = photo.id || (photo.nativeAsset && photo.nativeAsset.id);
+      return id !== photoId;
+    });
     saveTrash(newTrash)
   }
 
   const emptyTrash = async () => {
     try {
-      const assetIds = trash.map((item) => item.photo.id)
+      // Надежно достаем ID из объектов (на случай, если новый API их прячет)
+      const assetIds = trash.map((item) => {
+        const photo = item.photo as any;
+        return photo.id || (photo.nativeAsset && photo.nativeAsset.id);
+      }).filter(Boolean); // Убираем undefined
 
       if (assetIds.length > 0) {
-        // Запрашиваем разрешение на удаление (для iOS обязательно)
-        const { status } = await MediaLibrary.requestPermissionsAsync()
+        // Используем legacy API для удаления
+        const { status } = await LegacyMediaLibrary.requestPermissionsAsync()
         if (status === 'granted') {
-          await MediaLibrary.deleteAssetsAsync(assetIds)
+          await LegacyMediaLibrary.deleteAssetsAsync(assetIds as string[])
         }
       }
-
-      await saveTrash([])
+      
+      await saveTrash([]) 
     } catch (error) {
       console.error('Ошибка при физическом удалении:', error)
-      // В случае ошибки (например, отказ в разрешении) корзину не чистим
     }
   }
+
   return {
     trash,
     isLoading,

@@ -18,6 +18,10 @@
     },
     "web": {
       "favicon": "./assets/icon.png"
-    }
+    },
+    "plugins": [
+      "expo-splash-screen",
+      "expo-status-bar"
+    ]
   }
 }
