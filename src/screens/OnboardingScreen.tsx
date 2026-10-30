@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useCallback } from 'react'
 import {
   View,
   Text,
@@ -12,7 +12,8 @@ import { COLORS, TYPOGRAPHY, SPACING } from '../theme'
 
 const { width } = Dimensions.get('window')
 
-// Данные для наших слайдов
+const viewabilityConfig = { viewAreaCoveragePercentThreshold: 50 }
+
 const slides = [
   {
     id: '1',
@@ -47,28 +48,37 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
   const [currentIndex, setCurrentIndex] = useState(0)
   const flatListRef = useRef<FlatList>(null)
 
-  // Обработка свайпа слайдов
-  const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
-    if (viewableItems.length > 0) {
-      setCurrentIndex(viewableItems[0].index || 0)
-    }
-  }).current
+  // 2. Используем наш CustomViewToken
+  const onViewableItemsChanged = useCallback(
+    (info: any) => {
+      const { viewableItems } = info
+      if (viewableItems.length > 0 && viewableItems[0].index != null) {
+        setCurrentIndex(viewableItems[0].index)
+      }
+    },
+    []
+  )
 
-  const scrollToNext = () => {
+  const scrollToNext = useCallback(() => {
     if (currentIndex < slides.length - 1) {
       flatListRef.current?.scrollToIndex({ index: currentIndex + 1 })
     } else {
-      onFinish() // Если это последний слайд, завершаем онбординг
+      onFinish()
     }
-  }
+  }, [currentIndex, onFinish])
 
-  const renderItem = ({ item }: ListRenderItemInfo<(typeof slides)[0]>) => (
-    <View style={styles.slide}>
-      <Text style={styles.icon}>{item.icon}</Text>
-      <Text style={styles.title}>{item.title}</Text>
-      <Text style={styles.description}>{item.description}</Text>
-    </View>
+  const renderItem = useCallback(
+    ({ item }: ListRenderItemInfo<(typeof slides)[0]>) => (
+      <View style={styles.slide}>
+        <Text style={styles.icon}>{item.icon}</Text>
+        <Text style={styles.title}>{item.title}</Text>
+        <Text style={styles.description}>{item.description}</Text>
+      </View>
+    ),
+    []
   )
+
+  const keyExtractor = useCallback((item: (typeof slides)[0]) => item.id, [])
 
   return (
     <View style={styles.container}>
@@ -76,32 +86,27 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
         ref={flatListRef}
         data={slides}
         renderItem={renderItem}
-        keyExtractor={(item) => item.id}
+        keyExtractor={keyExtractor}
         horizontal
         showsHorizontalScrollIndicator={false}
         pagingEnabled
         bounces={false}
         onViewableItemsChanged={onViewableItemsChanged}
-        viewabilityConfig={{ viewAreaCoveragePercentThreshold: 50 }}
+        viewabilityConfig={viewabilityConfig}
       />
 
-      {/* Индикаторы (точки) */}
       <View style={styles.pagination}>
         {slides.map((_, index) => (
           <View
-            key={index}
+            key={index.toString()}
             style={[
               styles.dot,
-              {
-                backgroundColor:
-                  index === currentIndex ? COLORS.primary : '#D1D1D6',
-              },
+              index === currentIndex ? styles.activeDot : styles.inactiveDot,
             ]}
           />
         ))}
       </View>
 
-      {/* Кнопка действия */}
       <TouchableOpacity
         style={styles.button}
         onPress={scrollToNext}
@@ -118,23 +123,23 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.white,
     paddingTop: 50,
   },
   slide: {
     width: width,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 40,
+    paddingHorizontal: SPACING.xl,
   },
   icon: {
     fontSize: 100,
-    marginBottom: 40,
+    marginBottom: SPACING.xl,
   },
   title: {
     ...TYPOGRAPHY.title,
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: SPACING.md,
   },
   description: {
     ...TYPOGRAPHY.body,
@@ -145,24 +150,30 @@ const styles = StyleSheet.create({
   pagination: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginBottom: 40,
+    marginBottom: SPACING.xl,
   },
   dot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    marginHorizontal: 4,
+    marginHorizontal: SPACING.xs,
+  },
+  activeDot: {
+    backgroundColor: COLORS.primary,
+  },
+  inactiveDot: {
+    backgroundColor: COLORS.inactiveDot,
   },
   button: {
     backgroundColor: COLORS.primary,
-    marginHorizontal: 40,
-    marginBottom: 50,
-    paddingVertical: 18,
+    marginHorizontal: SPACING.xl,
+    marginBottom: SPACING.xl,
+    paddingVertical: SPACING.md,
     borderRadius: 30,
     alignItems: 'center',
   },
   buttonText: {
-    color: '#fff',
+    color: COLORS.white,
     fontSize: 18,
     fontWeight: 'bold',
   },

@@ -1,22 +1,22 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo, useCallback } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import { TabBar } from '../components/TabBar'
 import { PhotoGrid } from '../components/PhotoGrid'
-import { FilterType, Asset } from '../types'
+import { FilterType, GalleryAsset } from '../types'
 import { isScreenshot } from '../utils/mediaUtils'
 import { LoadingState } from '../components/states/LoadingState'
 import { PermissionState } from '../components/states/PermissionState'
 import { EmptyState } from '../components/states/EmptyState'
-import { COLORS } from '../theme'
+import { COLORS, SPACING, TYPOGRAPHY, SHADOWS } from '../theme'
 import { TrashButton } from '../components/TrashButton'
 import { useTrash } from '../hooks/useTrash'
 
 interface HomeScreenProps {
-  allPhotos: Asset[]
+  allPhotos: GalleryAsset[]
   isLoading: boolean
   hasPermission: boolean
   askPermission: () => void
-  onStartCleaning: (photos: Asset[]) => void
+  onStartCleaning: (photos: GalleryAsset[]) => void
   onOpenTrash: () => void
 }
 
@@ -31,28 +31,38 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const [activeTab, setActiveTab] = useState<FilterType>('all')
   const { trash, isLoading: isTrashLoading } = useTrash()
 
-  // 1. Пока грузим галерею или корзину, показываем спиннер
+  // 1. Используем Set для O(1) поиска. И кешируем его, чтобы не пересоздавать при каждом рендере.
+  const trashUris = useMemo(() => {
+    return new Set(trash.map((t) => t.uri))
+  }, [trash])
+
+  // 2. Кешируем список доступных фото (без тех, что в корзине)
+  const availablePhotos = useMemo(() => {
+    return allPhotos.filter((photo) => !trashUris.has(photo.uri))
+  }, [allPhotos, trashUris])
+
+  // 3. Кешируем отфильтрованный список для текущей вкладки
+  const displayedPhotos = useMemo(() => {
+    if (activeTab === 'all') return availablePhotos
+    return availablePhotos.filter(isScreenshot)
+  }, [activeTab, availablePhotos])
+
+  // 4. Кешируем подсчет для вкладок
+  const counts = useMemo(() => {
+    const total = availablePhotos.length
+    const screenshots = availablePhotos.filter(isScreenshot).length
+    return { total, screenshots }
+  }, [availablePhotos])
+
+  // 5. Кешируем обработчик нажатия на кнопку
+  const handleStartCleaning = useCallback(() => {
+    onStartCleaning(displayedPhotos)
+  }, [onStartCleaning, displayedPhotos])
+
+  // Пока грузим галерею или корзину, показываем спиннер
   if (isLoading || isTrashLoading) return <LoadingState />
   
   if (!hasPermission) return <PermissionState onAskPermission={askPermission} />
-
-  // 2. Собираем URI фото, которые лежат в корзине
-  const trashUris = trash.map((t) => t.uri)
-
-  // 3. Фильтруем общий список: убираем те, что в корзине
-  const availablePhotos = allPhotos.filter(
-    (photo) => !trashUris.includes((photo as any).uri)
-  )
-
-  // 4. Применяем фильтр вкладок уже к "чистому" списку
-  const displayedPhotos =
-    activeTab === 'all'
-      ? availablePhotos
-      : availablePhotos.filter(isScreenshot)
-
-  // 5. Считаем количество для вкладок (тоже без учета корзины)
-  const totalCount = availablePhotos.length
-  const screenshotsCount = availablePhotos.filter(isScreenshot).length
 
   return (
     <View style={styles.container}>
@@ -64,8 +74,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       <TabBar
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        allCount={totalCount}
-        screenshotsCount={screenshotsCount}
+        allCount={counts.total}
+        screenshotsCount={counts.screenshots}
       />
 
       {displayedPhotos.length === 0 ? (
@@ -79,7 +89,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       {displayedPhotos.length > 0 && (
         <TouchableOpacity
           style={styles.fab}
-          onPress={() => onStartCleaning(displayedPhotos)}
+          onPress={handleStartCleaning}
+          activeOpacity={0.8}
         >
           <Text style={styles.fabText}>
             Начать разбор ({displayedPhotos.length})
@@ -91,28 +102,35 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff', paddingTop: 50 },
+  container: { 
+    flex: 1, 
+    backgroundColor: COLORS.white, 
+    paddingTop: 50 
+  },
   topHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 15,
+    paddingHorizontal: SPACING.lg,
+    marginBottom: SPACING.md,
   },
-  headerTitle: { fontSize: 24, fontWeight: 'bold', color: COLORS.textMain },
+  headerTitle: { 
+    ...TYPOGRAPHY.title, 
+    color: COLORS.textMain 
+  },
   fab: {
     position: 'absolute',
     bottom: 30,
     alignSelf: 'center',
     backgroundColor: COLORS.primary,
-    paddingVertical: 15,
-    paddingHorizontal: 30,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.xl,
     borderRadius: 30,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 5,
+    ...SHADOWS.medium, // Используем тень из темы
   },
-  fabText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
+  fabText: { 
+    color: COLORS.white, 
+    fontSize: 18, 
+    fontWeight: 'bold' 
+  },
 })

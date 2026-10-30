@@ -1,40 +1,37 @@
-import { Asset } from 'expo-media-library'
+import { GalleryAsset } from '../types'
 
-export const isScreenshot = (photo: Asset): boolean => {
-  const photoAny = photo as any
+// Расширяем наш базовый тип теми полями, которые могут прийти из нативного API, 
+// но не всегда описаны в стандартных типах библиотеки
+type ExtendedAsset = GalleryAsset & {
+  mediaSubtypes?: string[]
+  filename?: string
+}
+
+export const isScreenshot = (photo: GalleryAsset): boolean => {
+  const extendedPhoto = photo as ExtendedAsset
 
   // 1. Самый надежный способ в новом API — проверка медиа-подтипов
-  if (photoAny.mediaSubtypes && Array.isArray(photoAny.mediaSubtypes)) {
-    // Просто проверяем, есть ли строка 'screenshot' в массиве
-    if (photoAny.mediaSubtypes.includes('screenshot')) {
+  if (extendedPhoto.mediaSubtypes && Array.isArray(extendedPhoto.mediaSubtypes)) {
+    if (extendedPhoto.mediaSubtypes.includes('screenshot')) {
       return true
     }
   }
 
-  // 2. Фолбэк: проверяем URI (на случай, если подтипы не заполнены)
-  const path = photoAny.uri || photoAny.localUri || ''
-  if (typeof path === 'string') {
-    const lowerPath = path.toLowerCase()
+  // 2. Фолбэк: проверяем URI (он у нас уже точно есть в GalleryAsset)
+  if (extendedPhoto.uri && typeof extendedPhoto.uri === 'string') {
+    const lowerPath = extendedPhoto.uri.toLowerCase()
     if (lowerPath.includes('screenshot') || lowerPath.includes('screencap')) {
       return true
     }
   }
 
-  // 3. Фолбэк: проверяем filename, если он вдруг доступен напрямую
-  if (photoAny.filename && typeof photoAny.filename === 'string') {
-    const filename = photoAny.filename.toLowerCase()
+  // 3. Фолбэк: проверяем filename, если он доступен напрямую
+  if (extendedPhoto.filename && typeof extendedPhoto.filename === 'string') {
+    const filename = extendedPhoto.filename.toLowerCase()
     if (filename.includes('screenshot') || filename.includes('screencap')) {
       return true
     }
   }
 
   return false
-}
-
-export const filterPhotos = (
-  photos: Asset[],
-  filter: 'all' | 'screenshots',
-): Asset[] => {
-  if (filter === 'all') return photos
-  return photos.filter(isScreenshot)
 }

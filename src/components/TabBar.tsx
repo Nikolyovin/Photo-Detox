@@ -1,7 +1,7 @@
-import React from 'react'
+import React, { useCallback } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { FilterType } from '../types'
-import { COLORS, SPACING, SHADOWS } from '../theme'
+import { COLORS, SPACING, SHADOWS, TYPOGRAPHY } from '../theme'
 
 interface TabBarProps {
   activeTab: FilterType
@@ -10,44 +10,49 @@ interface TabBarProps {
   screenshotsCount: number
 }
 
-export const TabBar: React.FC<TabBarProps> = ({
+// Массив с конфигурацией вкладок (убирает дублирование кода)
+const TABS = [
+  { key: 'all' as FilterType, label: 'Все' },
+  { key: 'screenshots' as FilterType, label: 'Скриншоты' },
+]
+
+// Оборачиваем в React.memo, чтобы избежать лишних перерисовок
+export const TabBar: React.FC<TabBarProps> = React.memo(({
   activeTab,
   onTabChange,
   allCount,
   screenshotsCount,
 }) => {
+  // Оптимизируем функцию нажатия
+  const handlePress = useCallback((tabKey: FilterType) => {
+    onTabChange(tabKey)
+  }, [onTabChange])
+
   return (
     <View style={styles.container}>
       <View style={styles.tabBar}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'all' && styles.activeTab]}
-          onPress={() => onTabChange('all')}
-        >
-          <Text
-            style={activeTab === 'all' ? styles.activeTabText : styles.tabText}
-          >
-            Все ({allCount})
-          </Text>
-        </TouchableOpacity>
+        {TABS.map((tab) => {
+          const isActive = activeTab === tab.key
+          const count = tab.key === 'all' ? allCount : screenshotsCount
+          const label = `${tab.label} (${count})`
 
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'screenshots' && styles.activeTab]}
-          onPress={() => onTabChange('screenshots')}
-        >
-          <Text
-            style={
-              activeTab === 'screenshots'
-                ? styles.activeTabText
-                : styles.tabText
-            }
-          >
-            Скриншоты ({screenshotsCount})
-          </Text>
-        </TouchableOpacity>
+          return (
+            <TouchableOpacity
+              key={tab.key}
+              style={[styles.tab, isActive && styles.activeTab]}
+              onPress={() => handlePress(tab.key)}
+              activeOpacity={0.7}
+            >
+              <Text style={isActive ? styles.activeTabText : styles.tabText}>
+                {label}
+              </Text>
+            </TouchableOpacity>
+          )
+        })}
       </View>
     </View>
   )
-}
+})
 
 const styles = StyleSheet.create({
   container: {
@@ -56,7 +61,7 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: '#EFEFF4', // Светлый фон для подложки
+    backgroundColor: COLORS.tabBackground, // Цвет из темы
     borderRadius: 24,
     padding: 4,
   },
@@ -71,13 +76,15 @@ const styles = StyleSheet.create({
     ...SHADOWS.soft,
   },
   tabText: {
+    ...TYPOGRAPHY.body,
     fontSize: 15,
     fontWeight: '500',
     color: COLORS.textSecondary,
   },
   activeTabText: {
+    ...TYPOGRAPHY.body,
     fontSize: 15,
     fontWeight: '700',
-    color: COLORS.primary, // Фиолетовый цвет для активной
+    color: COLORS.primary,
   },
 })

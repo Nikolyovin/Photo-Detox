@@ -1,5 +1,6 @@
 import React from 'react'
-import { View, Text, Button, StyleSheet } from 'react-native'
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
+import { COLORS, SPACING, TYPOGRAPHY } from '../../theme'
 
 interface PermissionStateProps {
   onAskPermission: () => void
@@ -10,13 +11,22 @@ export const PermissionState: React.FC<PermissionStateProps> = ({
 }) => {
   return (
     <View style={styles.center}>
-      <Text style={{ fontSize: 60, marginBottom: 20 }}>🛡️</Text>
+      <Text style={styles.icon}>🛡️</Text>
+      
       <Text style={styles.title}>Добро пожаловать!</Text>
+      
       <Text style={styles.subtitle}>
         Чтобы найти скриншоты и дубликаты, нам нужен доступ к вашей галерее. Мы
         не отправляем ваши фото в интернет.
       </Text>
-      <Button title='Разрешить доступ' onPress={onAskPermission} />
+      
+      <TouchableOpacity 
+        style={styles.button} 
+        onPress={onAskPermission}
+        activeOpacity={0.8}
+      >
+        <Text style={styles.buttonText}>Разрешить доступ</Text>
+      </TouchableOpacity>
     </View>
   )
 }
@@ -26,19 +36,34 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#fff',
+    padding: SPACING.lg,
+    backgroundColor: COLORS.white,
+  },
+  icon: {
+    fontSize: 60,
+    marginBottom: SPACING.lg,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#1C1C1E',
+    ...TYPOGRAPHY.title, // Используем заголовок из темы
+    textAlign: 'center',
+    marginBottom: SPACING.md,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#666',
+    ...TYPOGRAPHY.body,
+    color: COLORS.textSecondary,
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: SPACING.xl,
+    lineHeight: 22, // Добавил межстрочный интервал для читаемости
+  },
+  button: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 30,
+    paddingVertical: 15,
+    borderRadius: 25,
+    width: '100%', // Кнопка на всю ширину (с учетом отступов)
+    alignItems: 'center',
+  },
+  buttonText: {
+    ...TYPOGRAPHY.button, // Используем стиль для текста кнопок
   },
 })

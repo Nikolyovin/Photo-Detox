@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import { Dimensions, Image, StyleSheet, Text, View } from 'react-native'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import Animated, {
@@ -7,15 +7,23 @@ import Animated, {
   withSpring,
   runOnJS,
   interpolate,
+  Extrapolation,
 } from 'react-native-reanimated'
-import { Asset } from '../types'
+import { GalleryAsset } from '../types' // Используем наш новый тип
 import { COLORS, SHADOWS } from '../theme'
 
 const { width, height } = Dimensions.get('window')
+
+// Константы (убираем магические числа)
+const CARD_WIDTH = width * 0.9
+const CARD_HEIGHT = height * 0.7
 const SWIPE_THRESHOLD = width * 0.25
+const MAX_ROTATION = 15
+const BADGE_THRESHOLD = 20
+const BADGE_MAX_OPACITY = 100
 
 interface SwipeCardProps {
-  photo: Asset
+  photo: GalleryAsset // Используем GalleryAsset
   onSwipeLeft: () => void
   onSwipeRight: () => void
 }
@@ -28,27 +36,31 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({
   const translateX = useSharedValue(0)
   const translateY = useSharedValue(0)
 
-  const panGesture = Gesture.Pan()
-    .onUpdate((event) => {
-      translateX.value = event.translationX
-      translateY.value = event.translationY
-    })
-    .onEnd((event) => {
-      if (event.translationX > SWIPE_THRESHOLD) {
-        translateX.value = withSpring(width * 1.5)
-        runOnJS(onSwipeRight)()
-      } else if (event.translationX < -SWIPE_THRESHOLD) {
-        translateX.value = withSpring(-width * 1.5)
-        runOnJS(onSwipeLeft)()
-      } else {
-        translateX.value = withSpring(0)
-        translateY.value = withSpring(0)
-      }
-    })
+  // Оптимизация: Gesture.Pan создается только один раз
+  const panGesture = useMemo(
+    () =>
+      Gesture.Pan()
+        .onUpdate((event) => {
+          translateX.value = event.translationX
+          translateY.value = event.translationY
+        })
+        .onEnd((event) => {
+          if (event.translationX > SWIPE_THRESHOLD) {
+            translateX.value = withSpring(width * 1.5)
+            runOnJS(onSwipeRight)()
+          } else if (event.translationX < -SWIPE_THRESHOLD) {
+            translateX.value = withSpring(-width * 1.5)
+            runOnJS(onSwipeLeft)()
+          } else {
+            translateX.value = withSpring(0)
+            translateY.value = withSpring(0)
+          }
+        }),
+    [onSwipeLeft, onSwipeRight, translateX, translateY]
+  )
 
-  // Стиль для самой карточки (поворот и сдвиг)
   const cardStyle = useAnimatedStyle(() => {
-    const rotate = (translateX.value / width) * 15
+    const rotate = (translateX.value / width) * MAX_ROTATION
     return {
       transform: [
         { translateX: translateX.value },
@@ -58,22 +70,35 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({
     }
   })
 
-  // Стиль для плашки "УДАЛИТЬ" (появляется при свайпе влево)
   const leftBadgeStyle = useAnimatedStyle(() => {
-    const opacity = interpolate(translateX.value, [-100, -20], [1, 0], 'clamp')
+    const opacity = interpolate(
+      translateX.value,
+      [-BADGE_MAX_OPACITY, -BADGE_THRESHOLD],
+      [1, 0],
+      Extrapolation.CLAMP
+    )
     const scale = interpolate(
       translateX.value,
-      [-100, -20],
+      [-BADGE_MAX_OPACITY, -BADGE_THRESHOLD],
       [1.1, 0.8],
-      'clamp',
+      Extrapolation.CLAMP
     )
     return { opacity, transform: [{ scale }] }
   })
 
-  // Стиль для плашки "ОСТАВИТЬ" (появляется при свайпе вправо)
   const rightBadgeStyle = useAnimatedStyle(() => {
-    const opacity = interpolate(translateX.value, [20, 100], [0, 1], 'clamp')
-    const scale = interpolate(translateX.value, [20, 100], [0.8, 1.1], 'clamp')
+    const opacity = interpolate(
+      translateX.value,
+      [BADGE_THRESHOLD, BADGE_MAX_OPACITY],
+      [0, 1],
+      Extrapolation.CLAMP
+    )
+    const scale = interpolate(
+      translateX.value,
+      [BADGE_THRESHOLD, BADGE_MAX_OPACITY],
+      [0.8, 1.1],
+      Extrapolation.CLAMP
+    )
     return { opacity, transform: [{ scale }] }
   })
 
@@ -81,28 +106,15 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({
     <View style={styles.cardContainer}>
       <GestureDetector gesture={panGesture}>
         <Animated.View style={[styles.card, cardStyle]}>
-          {/* Картинка рендерится ПЕРВОЙ, чтобы быть на заднем плане */}
-          <Image
-            source={{ uri: (photo as any).uri }}
-            style={styles.image}
-            resizeMode='cover'
-          />
+          {/* Теперь обращаемся к photo.uri напрямую, без as any! */}
+          <Image source={{ uri: photo.uri }} style={styles.image} resizeMode="cover" />
 
-          {/* Плашки рендерятся ПОВЕРХ картинки */}
-          <Animated.View
-            style={[styles.badge, styles.leftBadge, leftBadgeStyle]}
-          >
-            <Text style={[styles.badgeText, { color: COLORS.danger }]}>
-              УДАЛИТЬ
-            </Text>
+          <Animated.View style={[styles.badge, styles.leftBadge, leftBadgeStyle]}>
+            <Text style={[styles.badgeText, { color: COLORS.danger }]}>УДАЛИТЬ</Text>
           </Animated.View>
 
-          <Animated.View
-            style={[styles.badge, styles.rightBadge, rightBadgeStyle]}
-          >
-            <Text style={[styles.badgeText, { color: COLORS.accent }]}>
-              ОСТАВИТЬ
-            </Text>
+          <Animated.View style={[styles.badge, styles.rightBadge, rightBadgeStyle]}>
+            <Text style={[styles.badgeText, { color: COLORS.accent }]}>ОСТАВИТЬ</Text>
           </Animated.View>
 
           <View style={styles.hintContainer}>
@@ -121,8 +133,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   card: {
-    width: width * 0.9,
-    height: height * 0.7,
+    width: CARD_WIDTH,
+    height: CARD_HEIGHT,
     overflow: 'hidden',
     backgroundColor: COLORS.card,
     borderRadius: 24,
@@ -139,7 +151,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 12,
     borderWidth: 3,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)', // Полупрозрачный белый фон для читаемости
+    backgroundColor: COLORS.overlayLight, // Используем цвет из темы
   },
   leftBadge: {
     right: 20,
@@ -162,8 +174,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   hintText: {
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    color: '#fff',
+    backgroundColor: COLORS.overlayDark, // Используем цвет из темы
+    color: COLORS.white,
     paddingHorizontal: 15,
     paddingVertical: 5,
     borderRadius: 10,

@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useCallback } from 'react'
 import {
   View,
   Text,
@@ -6,18 +6,44 @@ import {
   FlatList,
   Dimensions,
   StyleSheet,
+  ListRenderItemInfo,
 } from 'react-native'
-import { Asset } from '../types'
+import { GalleryAsset } from '../types' // Используем новый тип с uri
+import { COLORS, SPACING, TYPOGRAPHY } from '../theme'
 
 const { width } = Dimensions.get('window')
 const numColumns = 3
 const imageSize = width / numColumns
 
 interface PhotoGridProps {
-  photos: Asset[]
+  photos: GalleryAsset[]
 }
 
+// 1. Выносим элемент списка в отдельный компонент и оборачиваем в React.memo
+// Это предотвратит перерисовку всех фото, если изменится только одно
+const PhotoItem = React.memo(({ item }: { item: GalleryAsset }) => (
+  <View style={styles.imageWrapper}>
+    <Image
+      source={{ uri: item.uri }}
+      style={styles.image}
+      resizeMode="cover"
+    />
+  </View>
+))
+
 export const PhotoGrid: React.FC<PhotoGridProps> = ({ photos }) => {
+  // 2. Кешируем функцию рендера, чтобы FlatList не создавал её заново при каждом рендере
+  const renderItem = useCallback(
+    ({ item }: ListRenderItemInfo<GalleryAsset>) => <PhotoItem item={item} />,
+    []
+  )
+
+  // 3. Кешируем keyExtractor
+  const keyExtractor = useCallback(
+    (item: GalleryAsset) => item.uri,
+    []
+  )
+
   if (photos.length === 0) {
     return (
       <View style={styles.center}>
@@ -29,22 +55,14 @@ export const PhotoGrid: React.FC<PhotoGridProps> = ({ photos }) => {
   return (
     <FlatList
       data={photos}
-      // Используем uri как ключ, с fallback на индекс (если uri вдруг нет)
-      keyExtractor={(item, index) => (item as any).uri || index.toString()}
+      keyExtractor={keyExtractor}
+      renderItem={renderItem}
       numColumns={numColumns}
-      renderItem={({ item }) => (
-        // Оборачиваем в View с серым фоном. Если картинка битая, будет серый квадрат, а не белый
-        <View style={styles.imageWrapper}>
-          <Image
-            source={{ uri: (item as any).uri }}
-            style={styles.image}
-            resizeMode="cover"
-            // Если картинка не загрузилась, мы просто ничего не делаем, 
-            // и остается серый фон из-под нее
-            onError={() => {}}
-          />
-        </View>
-      )}
+      // 4. Добавляем оптимизацию для длинных списков
+      initialNumToRender={15} 
+      maxToRenderPerBatch={15}
+      windowSize={5}
+      removeClippedSubviews={true} // Экономит память, отключая рендер за пределами экрана
     />
   )
 }
@@ -56,18 +74,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyText: {
-    color: '#888',
-    fontSize: 16,
+    ...TYPOGRAPHY.body,
+    color: COLORS.textSecondary,
   },
   imageWrapper: {
     width: imageSize,
     height: imageSize,
-    padding: 1, // Отступ между картинками
+    padding: 1, // Оставляем жесткий отступ в 1px для сетки
   },
   image: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#E5E5EA', // Серый фон для "битых" фото
-    borderRadius: 4, // Легкое скругление для красоты
+    backgroundColor: '#E5E5EA', // Можно вынести в тему как COLORS.placeholder
+    borderRadius: 4,
   },
 })

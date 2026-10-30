@@ -1,14 +1,25 @@
 export const COLORS = {
-  primary: '#6A5ACD', // Фиолетово-синий
+  primary: '#6A5ACD', // Фиолетово-синий (основной)
   accent: '#2ECC71', // Зеленый (Оставить)
   danger: '#FF3B30', // Красный (Удалить)
-  background: '#F8F9FA',
-  card: '#FFFFFF',
-  textMain: '#1C1C1E',
-  textSecondary: '#8E8E93',
+  background: '#F8F9FA', // Основной фон
+  backgroundSecondary: '#F5F5F5', // Фон для экрана разбора
+  card: '#FFFFFF', // Белый (карточки)
+  textMain: '#1C1C1E', // Почти черный
+  textSecondary: '#8E8E93', // Серый
   white: '#FFFFFF',
   black: '#000000',
   shadow: '#000000',
+  
+  // Элементы интерфейса
+  tabBackground: '#EFEFF4', 
+  buttonBackground: '#F0F0F0',
+  snackbar: '#333333',
+  inactiveDot: '#D1D1D6',
+  
+  // Прозрачные оверлеи
+  overlayLight: 'rgba(255, 255, 255, 0.9)',
+  overlayDark: 'rgba(0, 0, 0, 0.5)',
 }
 
 export const SPACING = {
@@ -17,6 +28,15 @@ export const SPACING = {
   md: 16,
   lg: 24,
   xl: 32,
+}
+
+// ДОБАВИЛИ РАДИУСЫ
+export const BORDER_RADIUS = {
+  sm: 8,
+  md: 12,
+  lg: 20,
+  xl: 24,
+  round: 999, // Для кнопок-таблеток
 }
 
 export const TYPOGRAPHY = {

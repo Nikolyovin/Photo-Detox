@@ -1,10 +1,11 @@
 import React from 'react'
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native'
+import { COLORS, SPACING, TYPOGRAPHY } from '../../theme'
 
 export const LoadingState = () => {
   return (
     <View style={styles.center}>
-      <ActivityIndicator size='large' color='#007AFF' />
+      <ActivityIndicator size="large" color={COLORS.primary} />
       <Text style={styles.text}>Загружаем галерею...</Text>
     </View>
   )
@@ -15,7 +16,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.white,
   },
-  text: { marginTop: 10, fontSize: 16, color: '#666' },
+  text: {
+    ...TYPOGRAPHY.body,
+    color: COLORS.textSecondary,
+    marginTop: SPACING.md,
+  },
 })
