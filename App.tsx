@@ -1,4 +1,3 @@
-// App.tsx
 import React, { useState, useEffect } from 'react'
 import { StyleSheet, View, ActivityIndicator } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
@@ -7,7 +6,7 @@ import { useGallery } from './src/hooks/useGallery'
 import { HomeScreen } from './src/screens/HomeScreen'
 import { CleanScreen } from './src/screens/CleanScreen'
 import { TrashScreen } from './src/screens/TrashScreen'
-import { OnboardingScreen } from './src/screens/OnboardingScreen' // <-- Импортируем
+import { OnboardingScreen } from './src/screens/OnboardingScreen'
 import { Asset } from './src/types'
 
 const ONBOARDING_KEY = '@photo_detox_onboarding'
@@ -15,16 +14,15 @@ const ONBOARDING_KEY = '@photo_detox_onboarding'
 type ScreenState = 'home' | 'cleaning' | 'trash'
 
 export default function App() {
-  const { allPhotos, hasPermission, isLoading, askPermission } = useGallery()
-
+  // ВАЖНО: достаем loadPhotos из хука, чтобы обновлять галерею
+  const { allPhotos, hasPermission, isLoading, askPermission, loadPhotos } = useGallery()
+  
   const [screen, setScreen] = useState<ScreenState>('home')
   const [photosToClean, setPhotosToClean] = useState<Asset[]>([])
-
-  // Состояния для Онбординга
+  
   const [isOnboardingLoading, setIsOnboardingLoading] = useState(true)
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false)
 
-  // Проверяем при запуске, проходил ли пользователь онбординг
   useEffect(() => {
     const checkOnboarding = async () => {
       try {
@@ -55,16 +53,21 @@ export default function App() {
     setScreen('cleaning')
   }
 
-  // Пока проверяем онбординг, показываем пустой экран или спиннер
+  // ФУНКЦИЯ, КОТОРОЙ НЕ ХВАТАЛО:
+  const handleFinishCleaning = () => {
+    setScreen('home')
+    // Обновляем список фото, чтобы удаленные картинки исчезли с главного экрана
+    loadPhotos() 
+  }
+
   if (isOnboardingLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size='large' color='#007AFF' />
+        <ActivityIndicator size="large" color="#007AFF" />
       </View>
     )
   }
 
-  // Если онбординг не пройден, показываем его
   if (!hasSeenOnboarding) {
     return (
       <GestureHandlerRootView style={styles.container}>
@@ -73,7 +76,6 @@ export default function App() {
     )
   }
 
-  // Основное приложение
   return (
     <GestureHandlerRootView style={styles.container}>
       {screen === 'home' && (
@@ -90,21 +92,24 @@ export default function App() {
       {screen === 'cleaning' && (
         <CleanScreen
           initialPhotos={photosToClean}
-          onFinish={() => setScreen('home')}
+          onFinish={handleFinishCleaning}
+          onOpenTrash={() => setScreen('trash')} // <-- Убедись, что это есть
         />
       )}
 
-      {screen === 'trash' && <TrashScreen onBack={() => setScreen('home')} />}
+      {screen === 'trash' && (
+        <TrashScreen 
+          onBack={() => {
+            setScreen('home')
+            loadPhotos() // Обновляем галерею и после выхода из корзины
+          }} 
+        />
+      )}
     </GestureHandlerRootView>
   )
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-  },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' },
 })

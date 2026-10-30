@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import * as MediaLibrary from 'expo-media-library'
 import { Asset, Query, AssetField, MediaType } from 'expo-media-library'
 import { filterPhotos } from '../utils/mediaUtils'
+import { File } from 'expo-file-system'
 
 export const useGallery = () => {
   const [allPhotos, setAllPhotos] = useState<Asset[]>([])
@@ -27,18 +28,29 @@ export const useGallery = () => {
         .orderBy({ key: AssetField.CREATION_TIME, ascending: false })
         .exe()
 
-      // Обогащаем каждый объект Asset готовым URI
+      // 1. Получаем URI для каждого актива
       const assetsWithUri = await Promise.all(
         assets.map(async (asset) => {
           let uri = (asset as any).uri;
           if (!uri && typeof (asset as any).getUri === 'function') {
             uri = await (asset as any).getUri();
           }
-          return { ...asset, uri }; // Возвращаем копию с добавленным полем uri
+          return { ...asset, uri };
         })
       );
 
-      setAllPhotos(assetsWithUri as unknown as Asset[])
+      // 2. Фильтруем битые файлы (которых больше нет на диске)
+      const validAssets = assetsWithUri.filter((asset) => {
+        if (!asset.uri) return false;
+        try {
+          const file = new File(asset.uri);
+          return file.exists; // Проверяем, существует ли файл
+        } catch (e) {
+          return false; // Если ошибка — считаем, что файла нет
+        }
+      });
+
+      setAllPhotos(validAssets as unknown as Asset[])
     } catch (error) {
       console.error('Ошибка загрузки фото:', error)
     } finally {
@@ -55,6 +67,7 @@ export const useGallery = () => {
     hasPermission,
     isLoading,
     askPermission,
+    loadPhotos,
     getFilteredPhotos: (filter: 'all' | 'screenshots') =>
       filterPhotos(allPhotos, filter),
   }

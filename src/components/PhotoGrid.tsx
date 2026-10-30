@@ -29,13 +29,21 @@ export const PhotoGrid: React.FC<PhotoGridProps> = ({ photos }) => {
   return (
     <FlatList
       data={photos}
-      keyExtractor={(item) => item.id}
+      // Используем uri как ключ, с fallback на индекс (если uri вдруг нет)
+      keyExtractor={(item, index) => (item as any).uri || index.toString()}
       numColumns={numColumns}
       renderItem={({ item }) => (
-        <Image
-          source={{ uri: item.uri }}
-          style={{ width: imageSize, height: imageSize, margin: 1 }}
-        />
+        // Оборачиваем в View с серым фоном. Если картинка битая, будет серый квадрат, а не белый
+        <View style={styles.imageWrapper}>
+          <Image
+            source={{ uri: (item as any).uri }}
+            style={styles.image}
+            resizeMode="cover"
+            // Если картинка не загрузилась, мы просто ничего не делаем, 
+            // и остается серый фон из-под нее
+            onError={() => {}}
+          />
+        </View>
       )}
     />
   )
@@ -50,5 +58,16 @@ const styles = StyleSheet.create({
   emptyText: {
     color: '#888',
     fontSize: 16,
+  },
+  imageWrapper: {
+    width: imageSize,
+    height: imageSize,
+    padding: 1, // Отступ между картинками
+  },
+  image: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#E5E5EA', // Серый фон для "битых" фото
+    borderRadius: 4, // Легкое скругление для красоты
   },
 })

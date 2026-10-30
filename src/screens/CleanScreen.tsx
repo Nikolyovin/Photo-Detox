@@ -5,6 +5,7 @@ import {
   Text,
   TouchableOpacity,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native'
 import Animated, {
   useAnimatedStyle,
@@ -15,34 +16,51 @@ import { SwipeCard } from '../components/SwipeCard'
 import { Asset } from '../types'
 import { useTrash } from '../hooks/useTrash'
 import { COLORS, SHADOWS } from '../theme'
+import { TrashButton } from '../components/TrashButton'
 
 const { width } = Dimensions.get('window')
 
 interface CleanScreenProps {
   initialPhotos: Asset[]
   onFinish: () => void
+  onOpenTrash: () => void
 }
 
 export const CleanScreen: React.FC<CleanScreenProps> = ({
   initialPhotos,
   onFinish,
+  onOpenTrash,
 }) => {
-  const [photos, setPhotos] = useState<Asset[]>(
-    initialPhotos.filter((p) => p != null),
-  )
-  const { addToTrash, removeFromTrash } = useTrash()
+  // Изначально массив пустой, заполним его после загрузки корзины
+  const [photos, setPhotos] = useState<Asset[]>([])
+  
+  const { addToTrash, removeFromTrash, trash, isLoading: isTrashLoading } = useTrash()
 
   // Состояния для Undo-плашки
   const [lastDeleted, setLastDeleted] = useState<Asset | null>(null)
   const [showUndo, setShowUndo] = useState(false)
-  const timerRef = useRef<NodeJS.Timeout | null>(null)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Анимация выезда плашки (снизу вверх)
-  const undoPosition = useSharedValue(150) // Изначально скрыта внизу
+  const undoPosition = useSharedValue(150)
 
   useEffect(() => {
     undoPosition.value = withTiming(showUndo ? 0 : 150, { duration: 300 })
   }, [showUndo])
+
+  // Фильтруем фото, когда корзина загрузится
+  useEffect(() => {
+    if (!isTrashLoading) {
+      // Собираем URI всех фото, которые уже в корзине
+      const trashUris = trash.map((t) => t.uri)
+      
+      // Оставляем только те фото, которых нет в корзине
+      const availablePhotos = initialPhotos.filter(
+        (p) => p != null && !trashUris.includes((p as any).uri)
+      )
+      setPhotos(availablePhotos)
+    }
+  }, [isTrashLoading]) // Срабатывает только когда корзина загрузилась
 
   const undoAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: undoPosition.value }],
@@ -52,12 +70,10 @@ export const CleanScreen: React.FC<CleanScreenProps> = ({
     const currentPhoto = photos[0]
     if (!currentPhoto) return
 
-    // Сохраняем для Undo и отправляем в корзину
     setLastDeleted(currentPhoto)
     addToTrash(currentPhoto)
     setPhotos((prev) => prev.slice(1))
 
-    // Показываем плашку и запускаем таймер на 3 секунды
     setShowUndo(true)
     if (timerRef.current) clearTimeout(timerRef.current)
     timerRef.current = setTimeout(() => {
@@ -67,20 +83,28 @@ export const CleanScreen: React.FC<CleanScreenProps> = ({
 
   const handleSwipeRight = () => {
     setPhotos((prev) => prev.slice(1))
-    // Если свайпаем вправо, скрываем плашку Undo
     setShowUndo(false)
   }
 
   const handleUndo = () => {
     if (!lastDeleted) return
 
-    // Возвращаем фото в начало списка
     setPhotos((prev) => [lastDeleted, ...prev])
-    // Удаляем его из корзины
     removeFromTrash(lastDeleted)
-    // Прячем плашку
     setShowUndo(false)
     if (timerRef.current) clearTimeout(timerRef.current)
+  }
+
+  // Пока грузится корзина, показываем спиннер
+  if (isTrashLoading) {
+    return (
+      <View style={[styles.container, styles.center]}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+        <Text style={{ marginTop: 10, color: COLORS.textSecondary }}>
+          Проверяем корзину...
+        </Text>
+      </View>
+    )
   }
 
   if (photos.length === 0) {
@@ -100,7 +124,10 @@ export const CleanScreen: React.FC<CleanScreenProps> = ({
         <TouchableOpacity onPress={onFinish}>
           <Text style={styles.backButton}>← Назад</Text>
         </TouchableOpacity>
+        
         <Text style={styles.headerText}>Осталось: {photos.length}</Text>
+        
+        <TrashButton onPress={onOpenTrash} />
       </View>
 
       <View style={styles.cardsContainer}>
@@ -132,6 +159,10 @@ export const CleanScreen: React.FC<CleanScreenProps> = ({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f5f5', paddingTop: 50 },
+  center: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -162,16 +193,17 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     borderRadius: 25,
     marginTop: 20,
+    alignSelf: 'center',
   },
   buttonText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
 
   // Стили для Undo-плашки
   undoSnackbar: {
     position: 'absolute',
-    bottom: 40, // Отступ от низа экрана
+    bottom: 40,
     left: 20,
     right: 20,
-    backgroundColor: '#333333', // Темный фон для контраста
+    backgroundColor: '#333333',
     borderRadius: 12,
     paddingHorizontal: 20,
     paddingVertical: 16,
@@ -190,7 +222,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   undoButtonText: {
-    color: COLORS.accent, // Зеленый цвет для действия
+    color: COLORS.accent,
     fontSize: 16,
     fontWeight: 'bold',
   },

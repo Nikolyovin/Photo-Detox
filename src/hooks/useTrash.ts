@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Asset } from '../types'
 import * as MediaLibrary from 'expo-media-library'
+// import * as FileSystem from 'expo-file-system'
+import { File } from 'expo-file-system'
 
 const TRASH_KEY = '@photo_detox_trash'
-// Добавили константу (7 дней в миллисекундах)
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
-// const SEVEN_DAYS_MS = 10 * 1000 ВРЕМЕННО ДЛЯ ТЕСТА (10 секунд)
+// const SEVEN_DAYS_MS = 10 * 1000 // ВРЕМЕННО ДЛЯ ТЕСТА
 
 export interface TrashItem {
   photo: Asset
@@ -22,7 +23,6 @@ export const useTrash = () => {
     loadTrash()
   }, [])
 
-  // Сохранение вынесли наверх
   const saveTrash = async (newTrash: TrashItem[]) => {
     try {
       setTrash(newTrash)
@@ -32,6 +32,29 @@ export const useTrash = () => {
     }
   }
 
+  // 🔥 ТОЛЬКО FileSystem, никаких Asset.delete()
+  const deletePhotosPhysically = async (itemsToDelete: TrashItem[]) => {
+  if (itemsToDelete.length === 0) return
+
+  await Promise.all(
+    itemsToDelete.map(async (item) => {
+      if (!item.uri) {
+        console.warn('У фото нет uri, пропускаем:', item.photo.id)
+        return
+      }
+
+      try {
+        // Создаем объект File из сохраненного URI и удаляем его
+        const file = new File(item.uri)
+        file.delete()
+        console.log('Файл удален:', item.uri)
+      } catch (error) {
+        console.error('Не удалось удалить файл через File API:', error)
+      }
+    })
+  )
+}
+
   const loadTrash = async () => {
     try {
       const data = await AsyncStorage.getItem(TRASH_KEY)
@@ -39,7 +62,6 @@ export const useTrash = () => {
         const parsedTrash: TrashItem[] = JSON.parse(data)
         const now = Date.now()
 
-        // Разделяем фото на просроченные и актуальные
         const expiredItems = parsedTrash.filter(
           (item) => now - item.deletedAt > SEVEN_DAYS_MS,
         )
@@ -47,27 +69,9 @@ export const useTrash = () => {
           (item) => now - item.deletedAt <= SEVEN_DAYS_MS,
         )
 
-        // Если есть просроченные фото — удаляем их физически
         if (expiredItems.length > 0) {
-          console.log(
-            `Найдено ${expiredItems.length} фото старше 7 дней. Удаляем...`,
-          )
-          try {
-            const { status } = await MediaLibrary.requestPermissionsAsync()
-            if (status === 'granted') {
-              await Promise.all(
-                expiredItems.map((item) =>
-                  (item.photo as any)
-                    .delete()
-                    .catch((e: any) => console.warn(e)),
-                ),
-              )
-            }
-          } catch (err) {
-            console.error('Ошибка автоудаления старых фото:', err)
-          }
-
-          // Сохраняем только валидные фото
+          console.log(`Найдено ${expiredItems.length} старых фото. Удаляем...`)
+          await deletePhotosPhysically(expiredItems)
           await saveTrash(validItems)
         } else {
           setTrash(validItems)
@@ -101,7 +105,6 @@ export const useTrash = () => {
   }
 
   const removeFromTrash = async (photoToRemove: Asset) => {
-    // Сравниваем объекты по ссылке
     const newTrash = trash.filter((item) => item.photo !== photoToRemove)
     await saveTrash(newTrash)
   }
@@ -109,25 +112,11 @@ export const useTrash = () => {
   const emptyTrash = async () => {
     try {
       if (trash.length > 0) {
-        const { status } = await MediaLibrary.requestPermissionsAsync()
-        if (status === 'granted') {
-          // Вызываем метод delete() у каждого объекта Asset
-          await Promise.all(
-            trash.map(async (item) => {
-              try {
-                await (item.photo as any).delete()
-              } catch (err) {
-                console.warn(`Не удалось удалить фото ${item.photo.id}:`, err)
-              }
-            }),
-          )
-        }
+        await deletePhotosPhysically(trash)
       }
-      // В любом случае очищаем нашу корзину
       await saveTrash([])
     } catch (error) {
       console.error('Ошибка при физическом удалении:', error)
-      // Если что-то пошло не так, очищаем корзину, чтобы не было "битых" фото
       await saveTrash([])
     }
   }

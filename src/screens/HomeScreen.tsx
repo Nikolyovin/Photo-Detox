@@ -7,6 +7,9 @@ import { isScreenshot } from '../utils/mediaUtils'
 import { LoadingState } from '../components/states/LoadingState'
 import { PermissionState } from '../components/states/PermissionState'
 import { EmptyState } from '../components/states/EmptyState'
+import { COLORS } from '../theme'
+import { TrashButton } from '../components/TrashButton'
+import { useTrash } from '../hooks/useTrash'
 
 interface HomeScreenProps {
   allPhotos: Asset[]
@@ -26,56 +29,52 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onOpenTrash,
 }) => {
   const [activeTab, setActiveTab] = useState<FilterType>('all')
+  const { trash, isLoading: isTrashLoading } = useTrash()
 
-  // 1. Состояние загрузки
-  if (isLoading) {
-    return <LoadingState />
-  }
+  // 1. Пока грузим галерею или корзину, показываем спиннер
+  if (isLoading || isTrashLoading) return <LoadingState />
+  
+  if (!hasPermission) return <PermissionState onAskPermission={askPermission} />
 
-  // 2. Состояние отсутствия разрешений
-  if (!hasPermission) {
-    return <PermissionState onAskPermission={askPermission} />
-  }
+  // 2. Собираем URI фото, которые лежат в корзине
+  const trashUris = trash.map((t) => t.uri)
 
-  // Фильтрация
+  // 3. Фильтруем общий список: убираем те, что в корзине
+  const availablePhotos = allPhotos.filter(
+    (photo) => !trashUris.includes((photo as any).uri)
+  )
+
+  // 4. Применяем фильтр вкладок уже к "чистому" списку
   const displayedPhotos =
-    activeTab === 'all' ? allPhotos : allPhotos.filter(isScreenshot)
-  const screenshotsCount = allPhotos.filter(isScreenshot).length
+    activeTab === 'all'
+      ? availablePhotos
+      : availablePhotos.filter(isScreenshot)
 
-  // 3. Состояние пустой галереи
-  if (displayedPhotos.length === 0) {
-    return (
-      <View style={styles.container}>
-        <TabBar
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          allCount={allPhotos.length}
-          screenshotsCount={screenshotsCount}
-        />
-        <EmptyState
-          message={activeTab === 'all' ? 'Нет фотографий' : 'Нет скриншотов'}
-        />
-      </View>
-    )
-  }
+  // 5. Считаем количество для вкладок (тоже без учета корзины)
+  const totalCount = availablePhotos.length
+  const screenshotsCount = availablePhotos.filter(isScreenshot).length
 
-  // 4. Основной экран
   return (
     <View style={styles.container}>
+      <View style={styles.topHeader}>
+        <Text style={styles.headerTitle}>Галерея</Text>
+        <TrashButton onPress={onOpenTrash} />
+      </View>
+
       <TabBar
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        allCount={allPhotos.length}
+        allCount={totalCount}
         screenshotsCount={screenshotsCount}
       />
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Галерея</Text>
-        <TouchableOpacity onPress={onOpenTrash}>
-          <Text style={styles.trashLink}>Корзина</Text>
-        </TouchableOpacity>
-      </View>
 
-      <PhotoGrid photos={displayedPhotos} />
+      {displayedPhotos.length === 0 ? (
+        <EmptyState
+          message={activeTab === 'all' ? 'Нет фотографий' : 'Нет скриншотов'}
+        />
+      ) : (
+        <PhotoGrid photos={displayedPhotos} />
+      )}
 
       {displayedPhotos.length > 0 && (
         <TouchableOpacity
@@ -93,20 +92,19 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff', paddingTop: 50 },
-  header: {
+  topHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    marginBottom: 10,
     alignItems: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 15,
   },
-  headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#1C1C1E' },
-  trashLink: { color: '#007AFF', fontSize: 16, fontWeight: '500' },
+  headerTitle: { fontSize: 24, fontWeight: 'bold', color: COLORS.textMain },
   fab: {
     position: 'absolute',
     bottom: 30,
     alignSelf: 'center',
-    backgroundColor: '#007AFF',
+    backgroundColor: COLORS.primary,
     paddingVertical: 15,
     paddingHorizontal: 30,
     borderRadius: 30,
