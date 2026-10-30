@@ -4,6 +4,9 @@ import { Asset } from '../types'
 import * as MediaLibrary from 'expo-media-library'
 
 const TRASH_KEY = '@photo_detox_trash'
+// Добавили константу (7 дней в миллисекундах)
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
+// const SEVEN_DAYS_MS = 10 * 1000 ВРЕМЕННО ДЛЯ ТЕСТА (10 секунд)
 
 export interface TrashItem {
   photo: Asset
@@ -19,25 +22,61 @@ export const useTrash = () => {
     loadTrash()
   }, [])
 
-  const loadTrash = async () => {
-    try {
-      const data = await AsyncStorage.getItem(TRASH_KEY)
-      if (data) {
-        setTrash(JSON.parse(data))
-      }
-    } catch (e) {
-      console.error('Ошибка загрузки корзины', e)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
+  // Сохранение вынесли наверх
   const saveTrash = async (newTrash: TrashItem[]) => {
     try {
       setTrash(newTrash)
       await AsyncStorage.setItem(TRASH_KEY, JSON.stringify(newTrash))
     } catch (e) {
       console.error('Ошибка сохранения корзины', e)
+    }
+  }
+
+  const loadTrash = async () => {
+    try {
+      const data = await AsyncStorage.getItem(TRASH_KEY)
+      if (data) {
+        const parsedTrash: TrashItem[] = JSON.parse(data)
+        const now = Date.now()
+
+        // Разделяем фото на просроченные и актуальные
+        const expiredItems = parsedTrash.filter(
+          (item) => now - item.deletedAt > SEVEN_DAYS_MS,
+        )
+        const validItems = parsedTrash.filter(
+          (item) => now - item.deletedAt <= SEVEN_DAYS_MS,
+        )
+
+        // Если есть просроченные фото — удаляем их физически
+        if (expiredItems.length > 0) {
+          console.log(
+            `Найдено ${expiredItems.length} фото старше 7 дней. Удаляем...`,
+          )
+          try {
+            const { status } = await MediaLibrary.requestPermissionsAsync()
+            if (status === 'granted') {
+              await Promise.all(
+                expiredItems.map((item) =>
+                  (item.photo as any)
+                    .delete()
+                    .catch((e: any) => console.warn(e)),
+                ),
+              )
+            }
+          } catch (err) {
+            console.error('Ошибка автоудаления старых фото:', err)
+          }
+
+          // Сохраняем только валидные фото
+          await saveTrash(validItems)
+        } else {
+          setTrash(validItems)
+        }
+      }
+    } catch (e) {
+      console.error('Ошибка загрузки корзины', e)
+    } finally {
+      setIsLoading(false)
     }
   }
 
