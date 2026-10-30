@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Asset } from '../types'
-import * as LegacyMediaLibrary from 'expo-media-library/legacy'
+import * as MediaLibrary from 'expo-media-library'
 
 const TRASH_KEY = '@photo_detox_trash'
 
@@ -43,17 +43,17 @@ export const useTrash = () => {
 
   const addToTrash = async (photo: Asset) => {
     try {
-      let photoUri = (photo as any).uri;
+      let photoUri = (photo as any).uri
       if (!photoUri && typeof (photo as any).getUri === 'function') {
-        photoUri = await (photo as any).getUri();
+        photoUri = await (photo as any).getUri()
       }
 
-      const newItem: TrashItem = { 
-        photo, 
-        uri: photoUri || '', 
-        deletedAt: Date.now() 
+      const newItem: TrashItem = {
+        photo,
+        uri: photoUri || '',
+        deletedAt: Date.now(),
       }
-      
+
       const newTrash = [newItem, ...trash]
       await saveTrash(newTrash)
     } catch (e) {
@@ -61,34 +61,35 @@ export const useTrash = () => {
     }
   }
 
-  const removeFromTrash = (photoId: string) => {
-    const newTrash = trash.filter((item) => {
-      const photo = item.photo as any;
-      const id = photo.id || (photo.nativeAsset && photo.nativeAsset.id);
-      return id !== photoId;
-    });
-    saveTrash(newTrash)
+  const removeFromTrash = async (photoToRemove: Asset) => {
+    // Сравниваем объекты по ссылке
+    const newTrash = trash.filter((item) => item.photo !== photoToRemove)
+    await saveTrash(newTrash)
   }
 
   const emptyTrash = async () => {
     try {
-      // Надежно достаем ID из объектов (на случай, если новый API их прячет)
-      const assetIds = trash.map((item) => {
-        const photo = item.photo as any;
-        return photo.id || (photo.nativeAsset && photo.nativeAsset.id);
-      }).filter(Boolean); // Убираем undefined
-
-      if (assetIds.length > 0) {
-        // Используем legacy API для удаления
-        const { status } = await LegacyMediaLibrary.requestPermissionsAsync()
+      if (trash.length > 0) {
+        const { status } = await MediaLibrary.requestPermissionsAsync()
         if (status === 'granted') {
-          await LegacyMediaLibrary.deleteAssetsAsync(assetIds as string[])
+          // Вызываем метод delete() у каждого объекта Asset
+          await Promise.all(
+            trash.map(async (item) => {
+              try {
+                await (item.photo as any).delete()
+              } catch (err) {
+                console.warn(`Не удалось удалить фото ${item.photo.id}:`, err)
+              }
+            }),
+          )
         }
       }
-      
-      await saveTrash([]) 
+      // В любом случае очищаем нашу корзину
+      await saveTrash([])
     } catch (error) {
       console.error('Ошибка при физическом удалении:', error)
+      // Если что-то пошло не так, очищаем корзину, чтобы не было "битых" фото
+      await saveTrash([])
     }
   }
 

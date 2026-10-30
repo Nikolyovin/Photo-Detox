@@ -1,16 +1,12 @@
 import React, { useState } from 'react'
-import {
-  View,
-  Text,
-  Button,
-  StyleSheet,
-  ActivityIndicator,
-  TouchableOpacity,
-} from 'react-native'
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import { TabBar } from '../components/TabBar'
 import { PhotoGrid } from '../components/PhotoGrid'
 import { FilterType, Asset } from '../types'
 import { isScreenshot } from '../utils/mediaUtils'
+import { LoadingState } from '../components/states/LoadingState'
+import { PermissionState } from '../components/states/PermissionState'
+import { EmptyState } from '../components/states/EmptyState'
 
 interface HomeScreenProps {
   allPhotos: Asset[]
@@ -18,7 +14,7 @@ interface HomeScreenProps {
   hasPermission: boolean
   askPermission: () => void
   onStartCleaning: (photos: Asset[]) => void
-  onOpenTrash: () => void // <-- Добавлен пропс
+  onOpenTrash: () => void
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
@@ -27,36 +23,43 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   hasPermission,
   askPermission,
   onStartCleaning,
-  onOpenTrash, // <-- Добавлено сюда
+  onOpenTrash,
 }) => {
   const [activeTab, setActiveTab] = useState<FilterType>('all')
 
+  // 1. Состояние загрузки
   if (isLoading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size='large' color='#007AFF' />
-        <Text style={{ marginTop: 10 }}>Загружаем галерею...</Text>
-      </View>
-    )
+    return <LoadingState />
   }
 
+  // 2. Состояние отсутствия разрешений
   if (!hasPermission) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.title}>Фото-Детокс</Text>
-        <Text style={styles.subtitle}>
-          Нужен доступ к галерее, чтобы найти скриншоты и дубликаты
-        </Text>
-        <Button title='Разрешить доступ' onPress={askPermission} />
-      </View>
-    )
+    return <PermissionState onAskPermission={askPermission} />
   }
 
+  // Фильтрация
   const displayedPhotos =
     activeTab === 'all' ? allPhotos : allPhotos.filter(isScreenshot)
-
   const screenshotsCount = allPhotos.filter(isScreenshot).length
 
+  // 3. Состояние пустой галереи
+  if (displayedPhotos.length === 0) {
+    return (
+      <View style={styles.container}>
+        <TabBar
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          allCount={allPhotos.length}
+          screenshotsCount={screenshotsCount}
+        />
+        <EmptyState
+          message={activeTab === 'all' ? 'Нет фотографий' : 'Нет скриншотов'}
+        />
+      </View>
+    )
+  }
+
+  // 4. Основной экран
   return (
     <View style={styles.container}>
       <TabBar
@@ -65,19 +68,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         allCount={allPhotos.length}
         screenshotsCount={screenshotsCount}
       />
-      <View
-        style={{
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          paddingHorizontal: 20,
-          marginBottom: 10,
-        }}
-      >
-        <Text style={{ fontSize: 20, fontWeight: 'bold' }}>Галерея</Text>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Галерея</Text>
         <TouchableOpacity onPress={onOpenTrash}>
-          <Text style={{ color: '#007AFF', fontSize: 16 }}>Корзина</Text>
+          <Text style={styles.trashLink}>Корзина</Text>
         </TouchableOpacity>
       </View>
+
       <PhotoGrid photos={displayedPhotos} />
 
       {displayedPhotos.length > 0 && (
@@ -96,19 +93,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff', paddingTop: 50 },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    marginBottom: 10,
     alignItems: 'center',
-    padding: 20,
   },
-  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 10 },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
+  headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#1C1C1E' },
+  trashLink: { color: '#007AFF', fontSize: 16, fontWeight: '500' },
   fab: {
     position: 'absolute',
     bottom: 30,

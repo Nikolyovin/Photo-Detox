@@ -1,4 +1,3 @@
-// src/screens/TrashScreen.tsx
 import React from 'react'
 import {
   View,
@@ -8,7 +7,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
-  Alert, // <-- Добавили импорт
+  Alert,
 } from 'react-native'
 import { useTrash } from '../hooks/useTrash'
 
@@ -23,17 +22,17 @@ interface TrashScreenProps {
 export const TrashScreen: React.FC<TrashScreenProps> = ({ onBack }) => {
   const { trash, removeFromTrash, emptyTrash } = useTrash()
 
-  // Функция для показа окна подтверждения
+  // Функция для показа окна подтверждения (используется только один раз)
   const handleClearTrash = () => {
     Alert.alert(
-      "Очистить корзину?",
-      "Эти фотографии будут удалены из галереи навсегда. Это действие нельзя отменить.",
+      'Очистить корзину?',
+      'Эти фотографии будут удалены из галереи навсегда. Это действие нельзя отменить.',
       [
-        { text: "Отмена", style: "cancel" },
-        { text: "Удалить", style: "destructive", onPress: () => emptyTrash() }
-      ]
-    );
-  };
+        { text: 'Отмена', style: 'cancel' },
+        { text: 'Удалить', style: 'destructive', onPress: () => emptyTrash() },
+      ],
+    )
+  }
 
   return (
     <View style={styles.container}>
@@ -42,7 +41,7 @@ export const TrashScreen: React.FC<TrashScreenProps> = ({ onBack }) => {
           <Text style={styles.backButton}>← Назад</Text>
         </TouchableOpacity>
         <Text style={styles.headerText}>Корзина ({trash.length})</Text>
-        
+
         {trash.length > 0 && (
           <TouchableOpacity onPress={handleClearTrash}>
             <Text style={styles.clearButton}>Очистить</Text>
@@ -57,14 +56,16 @@ export const TrashScreen: React.FC<TrashScreenProps> = ({ onBack }) => {
       ) : (
         <FlatList
           data={trash}
-          keyExtractor={(item, index) => (item.photo as any).id || index.toString()}
+          keyExtractor={(item, index) =>
+            (item.photo as any).id || index.toString()
+          }
           numColumns={numColumns}
           renderItem={({ item }) => (
             <View style={{ width: imageSize, height: imageSize, padding: 2 }}>
               <Image source={{ uri: item.uri }} style={styles.image} />
               <TouchableOpacity
                 style={styles.restoreButton}
-                onPress={() => removeFromTrash((item.photo as any).id)}
+                onPress={() => removeFromTrash(item.photo)}
               >
                 <Text style={styles.restoreText}>↩</Text>
               </TouchableOpacity>
