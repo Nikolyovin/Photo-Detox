@@ -1,3 +1,8 @@
+![React Native](https://img.shields.io/badge/React_Native-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![Expo](https://img.shields.io/badge/Expo-1B1F23?style=for-the-badge&logo=expo&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)
+
 # 🧹 Фото-Детокс (Photo-Detox)
 
 **Фото-Детокс** — это бесплатное приложение для Android, которое помогает быстро и безопасно очистить галерею вашего смартфона от визуального мусора.
@@ -14,14 +19,13 @@
 
 ## 📸 Скриншоты
 
-_(Здесь будут скриншоты)_
+| Главный экран | Свайпы | Корзина |
+| :---: | :---: | :---: |
+| ![Главный экран](./assets/docs/main.png) | ![Свайпы](./assets/docs/swipe.png) | ![Корзина](./assets/docs/trash.png) |
 
-<!--
-Инструкция для тебя:
-Сделай 3-4 красивых скриншота на телефоне (Главный экран, Экран свайпа, Корзина, Онбординг).
-Загрузи их в папку `assets/screenshots` в репозитории и замени этот текст на:
-![Главный экран](./assets/screenshots/main.png)
--->
+| Экран завершения | Онбординг |
+| :---: | :---: |
+| ![Завершение](./assets/docs/done.png) | ![Онбординг](./assets/docs/onboarding.png) |
 
 ## 🛠️ Технологический стек
 
@@ -65,7 +69,7 @@ _(Здесь будут скриншоты)_
 
 Готовый установочный файл (`.apk`) всегда можно найти в разделе **[Releases](https://github.com/Nikolyovin/photo-detox/releases)** этого репозитория.
 
-Приложение также доступно в магазине **RuStore**: _(вставь ссылку, когда опубликуешь)_.
+<!-- Приложение также доступно в магазине **RuStore**: _(вставь ссылку, когда опубликуешь)_. -->
 
 ## 🤝 Вклад в проект
 
