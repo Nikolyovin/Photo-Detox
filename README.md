@@ -21,11 +21,11 @@
 
 | Главный экран | Свайпы | Корзина |
 | :---: | :---: | :---: |
-| ![Главный экран](./assets/docs/main.png) | ![Свайпы](./assets/docs/swipe.png) | ![Корзина](./assets/docs/trash.png) |
+| ![Главный экран](./docs/main.png) | ![Свайпы](./docs/swipe.png) | ![Корзина](./docs/trash.png) |
 
 | Экран завершения | Онбординг |
 | :---: | :---: |
-| ![Завершение](./assets/docs/done.png) | ![Онбординг](./assets/docs/onboarding.png) |
+| ![Завершение](./docs/done.png) | ![Онбординг](./docs/onboarding.png) |
 
 ## 🛠️ Технологический стек
 
