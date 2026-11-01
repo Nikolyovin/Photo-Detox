@@ -1,7 +1,8 @@
-import React, { useCallback } from 'react'
+import React, { useCallback, useMemo } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { FilterType } from '../types'
-import { COLORS, SPACING, SHADOWS, TYPOGRAPHY } from '../theme'
+import { SPACING, SHADOWS, TYPOGRAPHY, ThemeColors } from '../theme'
+import { useTheme } from '../theme/ThemeContext'
 
 interface TabBarProps {
   activeTab: FilterType
@@ -10,20 +11,22 @@ interface TabBarProps {
   screenshotsCount: number
 }
 
-// Массив с конфигурацией вкладок (убирает дублирование кода)
+// Массив с конфигурацией вкладок
 const TABS = [
   { key: 'all' as FilterType, label: 'Все' },
   { key: 'screenshots' as FilterType, label: 'Скриншоты' },
 ]
 
-// Оборачиваем в React.memo, чтобы избежать лишних перерисовок
 export const TabBar: React.FC<TabBarProps> = React.memo(({
   activeTab,
   onTabChange,
   allCount,
   screenshotsCount,
 }) => {
-  // Оптимизируем функцию нажатия
+  const { colors } = useTheme()
+  // Генерируем стили на основе текущей темы
+  const styles = useMemo(() => createStyles(colors), [colors])
+
   const handlePress = useCallback((tabKey: FilterType) => {
     onTabChange(tabKey)
   }, [onTabChange])
@@ -54,14 +57,15 @@ export const TabBar: React.FC<TabBarProps> = React.memo(({
   )
 })
 
-const styles = StyleSheet.create({
+// Фабрика стилей
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     paddingHorizontal: SPACING.md,
     marginBottom: SPACING.md,
   },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: COLORS.tabBackground, // Цвет из темы
+    backgroundColor: colors.tabBackground, // Динамический цвет
     borderRadius: 24,
     padding: 4,
   },
@@ -72,19 +76,19 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   activeTab: {
-    backgroundColor: COLORS.white,
+    backgroundColor: colors.card, // В темной теме это будет темно-серый, а не белый
     ...SHADOWS.soft,
   },
   tabText: {
     ...TYPOGRAPHY.body,
     fontSize: 15,
     fontWeight: '500',
-    color: COLORS.textSecondary,
+    color: colors.textSecondary, // Динамический цвет
   },
   activeTabText: {
     ...TYPOGRAPHY.body,
     fontSize: 15,
     fontWeight: '700',
-    color: COLORS.primary,
+    color: colors.primary, // Динамический цвет
   },
 })

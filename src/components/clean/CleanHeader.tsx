@@ -1,7 +1,8 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { TrashButton } from '../TrashButton'
-import { COLORS, SPACING } from '../../theme'
+import { SPACING, ThemeColors } from '../../theme'
+import { useTheme } from '../../theme/ThemeContext'
 
 interface CleanHeaderProps {
   count: number
@@ -10,6 +11,9 @@ interface CleanHeaderProps {
 }
 
 export const CleanHeader: React.FC<CleanHeaderProps> = ({ count, onFinish, onOpenTrash }) => {
+  const { colors } = useTheme()
+  const styles = useMemo(() => createStyles(colors), [colors])
+
   return (
     <View style={styles.header}>
       <TouchableOpacity onPress={onFinish}>
@@ -23,7 +27,7 @@ export const CleanHeader: React.FC<CleanHeaderProps> = ({ count, onFinish, onOpe
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -31,6 +35,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: SPACING.sm,
   },
-  backButton: { fontSize: 18, color: COLORS.primary, fontWeight: '500' },
-  headerText: { fontSize: 18, fontWeight: 'bold', color: COLORS.textMain },
+  backButton: { fontSize: 18, color: colors.primary, fontWeight: '500' },
+  headerText: { fontSize: 18, fontWeight: 'bold', color: colors.textMain },
 })

@@ -1,26 +1,30 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native'
-import { COLORS, SPACING, TYPOGRAPHY } from '../../theme'
+import { SPACING, TYPOGRAPHY, ThemeColors } from '../../theme'
+import { useTheme } from '../../theme/ThemeContext'
 
 export const LoadingState = () => {
+  const { colors } = useTheme()
+  const styles = useMemo(() => createStyles(colors), [colors])
+
   return (
     <View style={styles.center}>
-      <ActivityIndicator size="large" color={COLORS.primary} />
+      <ActivityIndicator size="large" color={colors.primary} />
       <Text style={styles.text}>Загружаем галерею...</Text>
     </View>
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   center: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: COLORS.white,
+    backgroundColor: colors.background, // Заменили white на background для темной темы
   },
   text: {
     ...TYPOGRAPHY.body,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     marginTop: SPACING.md,
   },
 })

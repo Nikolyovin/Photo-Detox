@@ -1,6 +1,7 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import { View, Text, StyleSheet } from 'react-native'
-import { COLORS, SPACING, TYPOGRAPHY } from '../../theme'
+import { SPACING, TYPOGRAPHY, ThemeColors } from '../../theme'
+import { useTheme } from '../../theme/ThemeContext'
 
 interface EmptyStateProps {
   message?: string
@@ -9,6 +10,9 @@ interface EmptyStateProps {
 export const EmptyState: React.FC<EmptyStateProps> = ({
   message = 'Здесь пока пусто',
 }) => {
+  const { colors } = useTheme()
+  const styles = useMemo(() => createStyles(colors), [colors])
+
   return (
     <View style={styles.center}>
       <Text style={styles.icon}>🕵️‍♂️</Text>
@@ -20,7 +24,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   center: {
     flex: 1,
     justifyContent: 'center',
@@ -33,13 +37,13 @@ const styles = StyleSheet.create({
   },
   title: {
     ...TYPOGRAPHY.subtitle,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontWeight: 'bold',
     marginBottom: SPACING.xs,
   },
   subtitle: {
     ...TYPOGRAPHY.body,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     textAlign: 'center',
   },
 })

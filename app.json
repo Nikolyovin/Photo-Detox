@@ -13,6 +13,9 @@
     "android": {
       "package": "com.nikolyovin.photodetox",
       "versionCode": 1,
+      "blockedPermissions": [
+    "android.permission.ACCESS_MEDIA_LOCATION"
+  ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#2D7FF9"
@@ -28,7 +31,8 @@
         {
           "photosPermission": "Приложению нужен доступ к вашим фото, чтобы находить скриншоты и удалять мусор.",
           "savePhotosPermission": "Приложению нужен доступ для сохранения изменений.",
-          "isAccessMediaLocationEnabled": true
+          "isAccessMediaLocationEnabled": false,
+          "granularPermissions": ["photo"] 
         }
       ],
       [

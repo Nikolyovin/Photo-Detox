@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react'
+import React, { useCallback, useMemo } from 'react'
 import {
   View,
   Text,
@@ -8,8 +8,9 @@ import {
   StyleSheet,
   ListRenderItemInfo,
 } from 'react-native'
-import { GalleryAsset } from '../types' // Используем новый тип с uri
-import { COLORS, SPACING, TYPOGRAPHY } from '../theme'
+import { GalleryAsset } from '../types'
+import { SPACING, TYPOGRAPHY, ThemeColors } from '../theme'
+import { useTheme } from '../theme/ThemeContext'
 
 const { width } = Dimensions.get('window')
 const numColumns = 3
@@ -19,9 +20,8 @@ interface PhotoGridProps {
   photos: GalleryAsset[]
 }
 
-// 1. Выносим элемент списка в отдельный компонент и оборачиваем в React.memo
-// Это предотвратит перерисовку всех фото, если изменится только одно
-const PhotoItem = React.memo(({ item }: { item: GalleryAsset }) => (
+// Передаем стили в пропсы, чтобы компонент не зависел от контекста и оставался быстрым
+const PhotoItem = React.memo(({ item, styles }: { item: GalleryAsset, styles: any }) => (
   <View style={styles.imageWrapper}>
     <Image
       source={{ uri: item.uri }}
@@ -32,13 +32,15 @@ const PhotoItem = React.memo(({ item }: { item: GalleryAsset }) => (
 ))
 
 export const PhotoGrid: React.FC<PhotoGridProps> = ({ photos }) => {
-  // 2. Кешируем функцию рендера, чтобы FlatList не создавал её заново при каждом рендере
+  const { colors } = useTheme()
+  const styles = useMemo(() => createStyles(colors), [colors])
+
+  // Передаем styles в renderItem, чтобы они обновлялись при смене темы
   const renderItem = useCallback(
-    ({ item }: ListRenderItemInfo<GalleryAsset>) => <PhotoItem item={item} />,
-    []
+    ({ item }: ListRenderItemInfo<GalleryAsset>) => <PhotoItem item={item} styles={styles} />,
+    [styles] 
   )
 
-  // 3. Кешируем keyExtractor
   const keyExtractor = useCallback(
     (item: GalleryAsset) => item.uri,
     []
@@ -58,16 +60,15 @@ export const PhotoGrid: React.FC<PhotoGridProps> = ({ photos }) => {
       keyExtractor={keyExtractor}
       renderItem={renderItem}
       numColumns={numColumns}
-      // 4. Добавляем оптимизацию для длинных списков
       initialNumToRender={15} 
       maxToRenderPerBatch={15}
       windowSize={5}
-      removeClippedSubviews={true} // Экономит память, отключая рендер за пределами экрана
+      removeClippedSubviews={true}
     />
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   center: {
     flex: 1,
     justifyContent: 'center',
@@ -75,17 +76,18 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     ...TYPOGRAPHY.body,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   imageWrapper: {
     width: imageSize,
     height: imageSize,
-    padding: 1, // Оставляем жесткий отступ в 1px для сетки
+    padding: 1,
   },
   image: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#E5E5EA', // Можно вынести в тему как COLORS.placeholder
+    // В темной теме лучше использовать очень темный серый для заглушки
+    backgroundColor: colors.backgroundSecondary, 
     borderRadius: 4,
   },
 })

@@ -1,12 +1,16 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
-import { COLORS, SPACING } from '../../theme'
+import { SPACING, ThemeColors } from '../../theme'
+import { useTheme } from '../../theme/ThemeContext'
 
 interface CleanEmptyStateProps {
   onFinish: () => void
 }
 
 export const CleanEmptyState: React.FC<CleanEmptyStateProps> = ({ onFinish }) => {
+  const { colors } = useTheme()
+  const styles = useMemo(() => createStyles(colors), [colors])
+
   return (
     <View style={styles.center}>
       <Text style={styles.title}>🎉 Все разобрано!</Text>
@@ -17,21 +21,21 @@ export const CleanEmptyState: React.FC<CleanEmptyStateProps> = ({ onFinish }) =>
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: SPACING.md,
-    color: COLORS.textMain,
+    color: colors.textMain,
   },
   button: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     paddingHorizontal: SPACING.xl,
     paddingVertical: SPACING.md,
     borderRadius: 25,
     marginTop: SPACING.lg,
   },
-  buttonText: { color: COLORS.white, fontSize: 18, fontWeight: 'bold' },
+  buttonText: { color: colors.white, fontSize: 18, fontWeight: 'bold' },
 })

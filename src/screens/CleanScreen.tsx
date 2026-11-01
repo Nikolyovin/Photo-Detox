@@ -1,12 +1,12 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { View, StyleSheet, Text, ActivityIndicator } from 'react-native'
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated'
 import { SwipeCard } from '../components/SwipeCard'
 import { GalleryAsset } from '../types'
 import { useTrash } from '../hooks/useTrash'
-import { COLORS, SPACING, TYPOGRAPHY } from '../theme'
+import { SPACING, TYPOGRAPHY, ThemeColors } from '../theme'
+import { useTheme } from '../theme/ThemeContext'
 
-// Импортируем наши новые компоненты
 import { CleanHeader } from '../components/clean/CleanHeader'
 import { UndoSnackbar } from '../components/clean/UndoSnackbar'
 import { CleanEmptyState } from '../components/clean/CleanEmptyState'
@@ -22,6 +22,9 @@ export const CleanScreen: React.FC<CleanScreenProps> = ({
   onFinish,
   onOpenTrash,
 }) => {
+  const { colors } = useTheme()
+  const styles = useMemo(() => createStyles(colors), [colors])
+
   const [photos, setPhotos] = useState<GalleryAsset[]>([])
   const { addToTrash, removeFromTrash, trash, isLoading: isTrashLoading } = useTrash()
 
@@ -29,24 +32,19 @@ export const CleanScreen: React.FC<CleanScreenProps> = ({
   const [showUndo, setShowUndo] = useState(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // 1. Защелка для инициализации
   const isInitialized = useRef(false)
-
   const undoPosition = useSharedValue(150)
 
   useEffect(() => {
     undoPosition.value = withTiming(showUndo ? 0 : 150, { duration: 300 })
   }, [showUndo, undoPosition])
 
-  // 2. Исправленный useEffect фильтрации
   useEffect(() => {
-    // Проверяем: корзина загружена и мы еще не инициализировали список
     if (!isTrashLoading && !isInitialized.current) {
       const trashUris = new Set(trash.map((t) => t.uri))
       const availablePhotos = initialPhotos.filter((p) => !trashUris.has(p.uri))
-      
       setPhotos(availablePhotos)
-      isInitialized.current = true // Ставим защелку
+      isInitialized.current = true
     }
   }, [isTrashLoading, initialPhotos, trash])
 
@@ -63,11 +61,9 @@ export const CleanScreen: React.FC<CleanScreenProps> = ({
   const handleSwipeLeft = useCallback(() => {
     const currentPhoto = photos[0]
     if (!currentPhoto) return
-
     setLastDeleted(currentPhoto)
     addToTrash(currentPhoto)
     setPhotos((prev) => prev.slice(1))
-
     setShowUndo(true)
     if (timerRef.current) clearTimeout(timerRef.current)
     timerRef.current = setTimeout(() => setShowUndo(false), 3000)
@@ -80,7 +76,6 @@ export const CleanScreen: React.FC<CleanScreenProps> = ({
 
   const handleUndo = useCallback(() => {
     if (!lastDeleted) return
-
     setPhotos((prev) => [lastDeleted, ...prev])
     removeFromTrash(lastDeleted)
     setShowUndo(false)
@@ -90,7 +85,7 @@ export const CleanScreen: React.FC<CleanScreenProps> = ({
   if (isTrashLoading) {
     return (
       <View style={[styles.container, styles.center]}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+        <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.spinnerText}>Проверяем корзину...</Text>
       </View>
     )
@@ -106,12 +101,7 @@ export const CleanScreen: React.FC<CleanScreenProps> = ({
 
   return (
     <View style={styles.container}>
-      <CleanHeader 
-        count={photos.length} 
-        onFinish={onFinish} 
-        onOpenTrash={onOpenTrash} 
-      />
-
+      <CleanHeader count={photos.length} onFinish={onFinish} onOpenTrash={onOpenTrash} />
       <View style={styles.cardsContainer}>
         <View style={styles.cardWrapper}>
           <SwipeCard
@@ -122,19 +112,18 @@ export const CleanScreen: React.FC<CleanScreenProps> = ({
           />
         </View>
       </View>
-
       <UndoSnackbar animatedStyle={undoAnimatedStyle} onUndo={handleUndo} />
     </View>
   )
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.backgroundSecondary, paddingTop: 50 },
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.backgroundSecondary, paddingTop: 50 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   spinnerText: {
     ...TYPOGRAPHY.body,
     marginTop: SPACING.md,
-    color: COLORS.textSecondary, 
+    color: colors.textSecondary,
   },
   cardsContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   cardWrapper: {

@@ -7,8 +7,10 @@ import { isScreenshot } from '../utils/mediaUtils'
 import { LoadingState } from '../components/states/LoadingState'
 import { PermissionState } from '../components/states/PermissionState'
 import { EmptyState } from '../components/states/EmptyState'
-import { COLORS, SPACING, TYPOGRAPHY, SHADOWS } from '../theme'
+import { SPACING, TYPOGRAPHY, SHADOWS, ThemeColors } from '../theme'
+import { useTheme } from '../theme/ThemeContext'
 import { TrashButton } from '../components/TrashButton'
+import { ThemeToggle } from '../components/ThemeToggle'
 import { useTrash } from '../hooks/useTrash'
 
 interface HomeScreenProps {
@@ -28,47 +30,57 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onStartCleaning,
   onOpenTrash,
 }) => {
+  const { colors } = useTheme()
+  const styles = useMemo(() => createStyles(colors), [colors])
+
   const [activeTab, setActiveTab] = useState<FilterType>('all')
   const { trash, isLoading: isTrashLoading } = useTrash()
 
-  // 1. Используем Set для O(1) поиска. И кешируем его, чтобы не пересоздавать при каждом рендере.
-  const trashUris = useMemo(() => {
-    return new Set(trash.map((t) => t.uri))
-  }, [trash])
+  const trashUris = useMemo(() => new Set(trash.map((t) => t.uri)), [trash])
+  
+  const availablePhotos = useMemo(
+    () => allPhotos.filter((photo) => !trashUris.has(photo.uri)), 
+    [allPhotos, trashUris]
+  )
+  
+  const displayedPhotos = useMemo(
+    () => activeTab === 'all' ? availablePhotos : availablePhotos.filter(isScreenshot), 
+    [activeTab, availablePhotos]
+  )
+  
+  const counts = useMemo(() => ({
+    total: availablePhotos.length,
+    screenshots: availablePhotos.filter(isScreenshot).length
+  }), [availablePhotos])
 
-  // 2. Кешируем список доступных фото (без тех, что в корзине)
-  const availablePhotos = useMemo(() => {
-    return allPhotos.filter((photo) => !trashUris.has(photo.uri))
-  }, [allPhotos, trashUris])
-
-  // 3. Кешируем отфильтрованный список для текущей вкладки
-  const displayedPhotos = useMemo(() => {
-    if (activeTab === 'all') return availablePhotos
-    return availablePhotos.filter(isScreenshot)
-  }, [activeTab, availablePhotos])
-
-  // 4. Кешируем подсчет для вкладок
-  const counts = useMemo(() => {
-    const total = availablePhotos.length
-    const screenshots = availablePhotos.filter(isScreenshot).length
-    return { total, screenshots }
-  }, [availablePhotos])
-
-  // 5. Кешируем обработчик нажатия на кнопку
   const handleStartCleaning = useCallback(() => {
     onStartCleaning(displayedPhotos)
   }, [onStartCleaning, displayedPhotos])
 
-  // Пока грузим галерею или корзину, показываем спиннер
   if (isLoading || isTrashLoading) return <LoadingState />
-  
   if (!hasPermission) return <PermissionState onAskPermission={askPermission} />
 
   return (
     <View style={styles.container}>
+      
+      {/* --- ШАПКА ЭКРАНА (3 колонки) --- */}
       <View style={styles.topHeader}>
-        <Text style={styles.headerTitle}>Галерея</Text>
-        <TrashButton onPress={onOpenTrash} />
+        
+        {/* Левая колонка (Тема) */}
+        <View style={styles.headerLeft}>
+          <ThemeToggle />
+        </View>
+
+        {/* Центральная колонка (Заголовок) */}
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle} numberOfLines={1}>Галерея</Text>
+        </View>
+
+        {/* Правая колонка (Корзина) */}
+        <View style={styles.headerRight}>
+          <TrashButton onPress={onOpenTrash} />
+        </View>
+
       </View>
 
       <TabBar
@@ -79,19 +91,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       />
 
       {displayedPhotos.length === 0 ? (
-        <EmptyState
-          message={activeTab === 'all' ? 'Нет фотографий' : 'Нет скриншотов'}
-        />
+        <EmptyState message={activeTab === 'all' ? 'Нет фотографий' : 'Нет скриншотов'} />
       ) : (
         <PhotoGrid photos={displayedPhotos} />
       )}
 
       {displayedPhotos.length > 0 && (
-        <TouchableOpacity
-          style={styles.fab}
-          onPress={handleStartCleaning}
-          activeOpacity={0.8}
-        >
+        <TouchableOpacity style={styles.fab} onPress={handleStartCleaning} activeOpacity={0.8}>
           <Text style={styles.fabText}>
             Начать разбор ({displayedPhotos.length})
           </Text>
@@ -101,35 +107,48 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: COLORS.white, 
+    backgroundColor: colors.background, 
     paddingTop: 50 
   },
   topHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: SPACING.lg,
+    paddingHorizontal: SPACING.md,
     marginBottom: SPACING.md,
+    height: 50,
+  },
+  headerLeft: {
+    flex: 1,
+    alignItems: 'flex-start', // Прижимаем луну влево
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center', // Центрируем заголовок
+    justifyContent: 'center',
+  },
+  headerRight: {
+    flex: 1,
+    alignItems: 'flex-end', // Прижимаем корзину вправо
   },
   headerTitle: { 
     ...TYPOGRAPHY.title, 
-    color: COLORS.textMain 
+    color: colors.textMain 
   },
   fab: {
     position: 'absolute',
     bottom: 30,
     alignSelf: 'center',
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     paddingVertical: SPACING.md,
     paddingHorizontal: SPACING.xl,
     borderRadius: 30,
-    ...SHADOWS.medium, // Используем тень из темы
+    ...SHADOWS.medium,
   },
   fabText: { 
-    color: COLORS.white, 
+    color: colors.white, 
     fontSize: 18, 
     fontWeight: 'bold' 
   },

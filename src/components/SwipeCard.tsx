@@ -9,12 +9,12 @@ import Animated, {
   interpolate,
   Extrapolation,
 } from 'react-native-reanimated'
-import { GalleryAsset } from '../types' // Используем наш новый тип
-import { COLORS, SHADOWS } from '../theme'
+import { GalleryAsset } from '../types'
+import { SHADOWS, ThemeColors } from '../theme'
+import { useTheme } from '../theme/ThemeContext'
 
 const { width, height } = Dimensions.get('window')
 
-// Константы (убираем магические числа)
 const CARD_WIDTH = width * 0.9
 const CARD_HEIGHT = height * 0.7
 const SWIPE_THRESHOLD = width * 0.25
@@ -23,7 +23,7 @@ const BADGE_THRESHOLD = 20
 const BADGE_MAX_OPACITY = 100
 
 interface SwipeCardProps {
-  photo: GalleryAsset // Используем GalleryAsset
+  photo: GalleryAsset
   onSwipeLeft: () => void
   onSwipeRight: () => void
 }
@@ -33,10 +33,12 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({
   onSwipeLeft,
   onSwipeRight,
 }) => {
+  const { colors } = useTheme()
+  const styles = useMemo(() => createStyles(colors), [colors])
+
   const translateX = useSharedValue(0)
   const translateY = useSharedValue(0)
 
-  // Оптимизация: Gesture.Pan создается только один раз
   const panGesture = useMemo(
     () =>
       Gesture.Pan()
@@ -71,34 +73,14 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({
   })
 
   const leftBadgeStyle = useAnimatedStyle(() => {
-    const opacity = interpolate(
-      translateX.value,
-      [-BADGE_MAX_OPACITY, -BADGE_THRESHOLD],
-      [1, 0],
-      Extrapolation.CLAMP
-    )
-    const scale = interpolate(
-      translateX.value,
-      [-BADGE_MAX_OPACITY, -BADGE_THRESHOLD],
-      [1.1, 0.8],
-      Extrapolation.CLAMP
-    )
+    const opacity = interpolate(translateX.value, [-BADGE_MAX_OPACITY, -BADGE_THRESHOLD], [1, 0], Extrapolation.CLAMP)
+    const scale = interpolate(translateX.value, [-BADGE_MAX_OPACITY, -BADGE_THRESHOLD], [1.1, 0.8], Extrapolation.CLAMP)
     return { opacity, transform: [{ scale }] }
   })
 
   const rightBadgeStyle = useAnimatedStyle(() => {
-    const opacity = interpolate(
-      translateX.value,
-      [BADGE_THRESHOLD, BADGE_MAX_OPACITY],
-      [0, 1],
-      Extrapolation.CLAMP
-    )
-    const scale = interpolate(
-      translateX.value,
-      [BADGE_THRESHOLD, BADGE_MAX_OPACITY],
-      [0.8, 1.1],
-      Extrapolation.CLAMP
-    )
+    const opacity = interpolate(translateX.value, [BADGE_THRESHOLD, BADGE_MAX_OPACITY], [0, 1], Extrapolation.CLAMP)
+    const scale = interpolate(translateX.value, [BADGE_THRESHOLD, BADGE_MAX_OPACITY], [0.8, 1.1], Extrapolation.CLAMP)
     return { opacity, transform: [{ scale }] }
   })
 
@@ -106,15 +88,14 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({
     <View style={styles.cardContainer}>
       <GestureDetector gesture={panGesture}>
         <Animated.View style={[styles.card, cardStyle]}>
-          {/* Теперь обращаемся к photo.uri напрямую, без as any! */}
           <Image source={{ uri: photo.uri }} style={styles.image} resizeMode="cover" />
 
           <Animated.View style={[styles.badge, styles.leftBadge, leftBadgeStyle]}>
-            <Text style={[styles.badgeText, { color: COLORS.danger }]}>УДАЛИТЬ</Text>
+            <Text style={[styles.badgeText, { color: colors.danger }]}>УДАЛИТЬ</Text>
           </Animated.View>
 
           <Animated.View style={[styles.badge, styles.rightBadge, rightBadgeStyle]}>
-            <Text style={[styles.badgeText, { color: COLORS.accent }]}>ОСТАВИТЬ</Text>
+            <Text style={[styles.badgeText, { color: colors.accent }]}>ОСТАВИТЬ</Text>
           </Animated.View>
 
           <View style={styles.hintContainer}>
@@ -126,7 +107,7 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   cardContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -136,7 +117,7 @@ const styles = StyleSheet.create({
     width: CARD_WIDTH,
     height: CARD_HEIGHT,
     overflow: 'hidden',
-    backgroundColor: COLORS.card,
+    backgroundColor: colors.card, // Динамический фон
     borderRadius: 24,
     ...SHADOWS.medium,
   },
@@ -151,16 +132,16 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 12,
     borderWidth: 3,
-    backgroundColor: COLORS.overlayLight, // Используем цвет из темы
+    backgroundColor: colors.overlayLight, // Динамический оверлей
   },
   leftBadge: {
     right: 20,
-    borderColor: COLORS.danger,
+    borderColor: colors.danger, // Динамическая рамка
     transform: [{ rotate: '15deg' }],
   },
   rightBadge: {
     left: 20,
-    borderColor: COLORS.accent,
+    borderColor: colors.accent, // Динамическая рамка
     transform: [{ rotate: '-15deg' }],
   },
   badgeText: {
@@ -174,8 +155,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   hintText: {
-    backgroundColor: COLORS.overlayDark, // Используем цвет из темы
-    color: COLORS.white,
+    backgroundColor: colors.overlayDark, // Динамический фон
+    color: colors.white, // Белый текст
     paddingHorizontal: 15,
     paddingVertical: 5,
     borderRadius: 10,

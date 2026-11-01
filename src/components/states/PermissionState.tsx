@@ -1,6 +1,7 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
-import { COLORS, SPACING, TYPOGRAPHY } from '../../theme'
+import { SPACING, TYPOGRAPHY, ThemeColors } from '../../theme'
+import { useTheme } from '../../theme/ThemeContext'
 
 interface PermissionStateProps {
   onAskPermission: () => void
@@ -9,6 +10,9 @@ interface PermissionStateProps {
 export const PermissionState: React.FC<PermissionStateProps> = ({
   onAskPermission,
 }) => {
+  const { colors } = useTheme()
+  const styles = useMemo(() => createStyles(colors), [colors])
+
   return (
     <View style={styles.center}>
       <Text style={styles.icon}>🛡️</Text>
@@ -31,39 +35,41 @@ export const PermissionState: React.FC<PermissionStateProps> = ({
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   center: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: SPACING.lg,
-    backgroundColor: COLORS.white,
+    backgroundColor: colors.background, // Динамический фон
   },
   icon: {
     fontSize: 60,
     marginBottom: SPACING.lg,
   },
   title: {
-    ...TYPOGRAPHY.title, // Используем заголовок из темы
+    ...TYPOGRAPHY.title,
+    color: colors.textMain, // Задали цвет явно
     textAlign: 'center',
     marginBottom: SPACING.md,
   },
   subtitle: {
     ...TYPOGRAPHY.body,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: SPACING.xl,
-    lineHeight: 22, // Добавил межстрочный интервал для читаемости
+    lineHeight: 22,
   },
   button: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     paddingHorizontal: 30,
     paddingVertical: 15,
     borderRadius: 25,
-    width: '100%', // Кнопка на всю ширину (с учетом отступов)
+    width: '100%',
     alignItems: 'center',
   },
   buttonText: {
-    ...TYPOGRAPHY.button, // Используем стиль для текста кнопок
+    ...TYPOGRAPHY.button,
+    color: colors.white, // Добавили белый цвет, так как убрали его из TYPOGRAPHY
   },
 })

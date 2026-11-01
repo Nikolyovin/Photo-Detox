@@ -1,35 +1,38 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import { TouchableOpacity, Text, StyleSheet } from 'react-native'
-import { COLORS, SPACING, TYPOGRAPHY } from '../theme'
+import { ThemeColors } from '../theme'
+import { useTheme } from '../theme/ThemeContext'
 
 interface TrashButtonProps {
   onPress: () => void
 }
 
-// Оборачиваем в React.memo, чтобы избежать лишних перерисовок
 export const TrashButton: React.FC<TrashButtonProps> = React.memo(({ onPress }) => {
+  const { colors } = useTheme()
+  const styles = useMemo(() => createStyles(colors), [colors])
+
   return (
     <TouchableOpacity 
       onPress={onPress} 
       style={styles.button} 
       activeOpacity={0.7}
+      accessibilityLabel="Корзина" // Для людей с ограниченными возможностями (Screen Readers)
     >
-      <Text style={styles.text}>🗑️ Корзина</Text>
+      <Text style={styles.icon}>🗑️</Text>
     </TouchableOpacity>
   )
 })
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   button: {
-    backgroundColor: COLORS.buttonBackground,
-    paddingHorizontal: SPACING.md, // 16
-    paddingVertical: SPACING.sm,   // 8
-    borderRadius: 20,
+    backgroundColor: colors.buttonBackground,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  text: {
-    ...TYPOGRAPHY.body, // Базовый шрифт
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.textMain,
+  icon: {
+    fontSize: 20,
   },
 })

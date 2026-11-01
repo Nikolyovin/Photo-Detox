@@ -7,15 +7,16 @@ import { HomeScreen } from './src/screens/HomeScreen'
 import { CleanScreen } from './src/screens/CleanScreen'
 import { TrashScreen } from './src/screens/TrashScreen'
 import { OnboardingScreen } from './src/screens/OnboardingScreen'
-import { GalleryAsset } from './src/types' // Используем GalleryAsset
-import { COLORS } from './src/theme' // Импортируем цвета
+import { GalleryAsset } from './src/types'
+import { ThemeProvider, useTheme } from './src/theme/ThemeContext' // Импортируем useTheme
 
 const ONBOARDING_KEY = '@photo_detox_onboarding'
 
 type ScreenState = 'home' | 'cleaning' | 'trash'
 
-export default function App() {
-  // Достаем loadPhotos из хука для обновления галереи
+// 1. Выносим всю логику в AppContent, чтобы иметь доступ к useTheme()
+const AppContent = () => {
+  const { colors } = useTheme() // Получаем цвета текущей темы
   const { allPhotos, hasPermission, isLoading, askPermission, loadPhotos } = useGallery()
   
   const [screen, setScreen] = useState<ScreenState>('home')
@@ -24,7 +25,6 @@ export default function App() {
   const [isOnboardingLoading, setIsOnboardingLoading] = useState(true)
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false)
 
-  // 1. Проверка онбординга
   useEffect(() => {
     const checkOnboarding = async () => {
       try {
@@ -41,7 +41,6 @@ export default function App() {
     checkOnboarding()
   }, [])
 
-  // 2. Оборачиваем все функции навигации в useCallback
   const finishOnboarding = useCallback(async () => {
     try {
       await AsyncStorage.setItem(ONBOARDING_KEY, 'true')
@@ -58,7 +57,7 @@ export default function App() {
 
   const handleFinishCleaning = useCallback(() => {
     setScreen('home')
-    loadPhotos() // Обновляем список, чтобы удаленные фото исчезли
+    loadPhotos()
   }, [loadPhotos])
 
   const handleOpenTrash = useCallback(() => {
@@ -67,30 +66,26 @@ export default function App() {
 
   const handleBackFromTrash = useCallback(() => {
     setScreen('home')
-    loadPhotos() // Обновляем галерею после выхода из корзины
+    loadPhotos()
   }, [loadPhotos])
 
-  // Экран загрузки онбординга
+  // Экран загрузки онбординга (цвета берем из темы)
   if (isOnboardingLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     )
   }
 
-  // Экран онбординга (если не проходил)
+  // Экран онбординга
   if (!hasSeenOnboarding) {
-    return (
-      <GestureHandlerRootView style={styles.container}>
-        <OnboardingScreen onFinish={finishOnboarding} />
-      </GestureHandlerRootView>
-    )
+    return <OnboardingScreen onFinish={finishOnboarding} />
   }
 
   // Основное приложение
   return (
-    <GestureHandlerRootView style={styles.container}>
+    <>
       {screen === 'home' && (
         <HomeScreen
           allPhotos={allPhotos}
@@ -113,6 +108,17 @@ export default function App() {
       {screen === 'trash' && (
         <TrashScreen onBack={handleBackFromTrash} />
       )}
+    </>
+  )
+}
+
+// 2. Главный App теперь просто обертка для провайдеров
+export default function App() {
+  return (
+    <GestureHandlerRootView style={styles.container}>
+      <ThemeProvider>
+        <AppContent />
+      </ThemeProvider>
     </GestureHandlerRootView>
   )
 }
@@ -124,7 +130,7 @@ const styles = StyleSheet.create({
   loadingContainer: { 
     flex: 1, 
     justifyContent: 'center', 
-    alignItems: 'center', 
-    backgroundColor: COLORS.white // Используем цвет из темы
+    alignItems: 'center'
+    // backgroundColor убрали отсюда, теперь он динамический выше
   },
 })
