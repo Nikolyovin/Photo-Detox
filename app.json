@@ -2,7 +2,7 @@
   "expo": {
     "name": "Фото-Детокс",
     "slug": "-photo-detox",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -12,7 +12,7 @@
     },
     "android": {
       "package": "com.nikolyovin.photodetox",
-      "versionCode": 2,
+      "versionCode": 3,
       "blockedPermissions": [
     "android.permission.ACCESS_MEDIA_LOCATION"
   ],
