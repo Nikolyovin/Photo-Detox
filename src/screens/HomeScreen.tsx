@@ -10,7 +10,7 @@ import { EmptyState } from '../components/states/EmptyState'
 import { SPACING, TYPOGRAPHY, SHADOWS, ThemeColors } from '../theme'
 import { useTheme } from '../theme/ThemeContext'
 import { TrashButton } from '../components/TrashButton'
-import { ThemeToggle } from '../components/ThemeToggle'
+import { SettingsButton } from '../components/SettingsButton' // <-- Заменили импорт
 import { useTrash } from '../hooks/useTrash'
 
 interface HomeScreenProps {
@@ -20,6 +20,7 @@ interface HomeScreenProps {
   askPermission: () => void
   onStartCleaning: (photos: GalleryAsset[]) => void
   onOpenTrash: () => void
+  onOpenSettings: () => void // <-- Добавили пропс
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
@@ -29,6 +30,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   askPermission,
   onStartCleaning,
   onOpenTrash,
+  onOpenSettings, // <-- Добавили в деструктуризацию
 }) => {
   const { colors } = useTheme()
   const styles = useMemo(() => createStyles(colors), [colors])
@@ -37,21 +39,27 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const { trash, isLoading: isTrashLoading } = useTrash()
 
   const trashUris = useMemo(() => new Set(trash.map((t) => t.uri)), [trash])
-  
+
   const availablePhotos = useMemo(
-    () => allPhotos.filter((photo) => !trashUris.has(photo.uri)), 
-    [allPhotos, trashUris]
+    () => allPhotos.filter((photo) => !trashUris.has(photo.uri)),
+    [allPhotos, trashUris],
   )
-  
+
   const displayedPhotos = useMemo(
-    () => activeTab === 'all' ? availablePhotos : availablePhotos.filter(isScreenshot), 
-    [activeTab, availablePhotos]
+    () =>
+      activeTab === 'all'
+        ? availablePhotos
+        : availablePhotos.filter(isScreenshot),
+    [activeTab, availablePhotos],
   )
-  
-  const counts = useMemo(() => ({
-    total: availablePhotos.length,
-    screenshots: availablePhotos.filter(isScreenshot).length
-  }), [availablePhotos])
+
+  const counts = useMemo(
+    () => ({
+      total: availablePhotos.length,
+      screenshots: availablePhotos.filter(isScreenshot).length,
+    }),
+    [availablePhotos],
+  )
 
   const handleStartCleaning = useCallback(() => {
     onStartCleaning(displayedPhotos)
@@ -62,25 +70,25 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
   return (
     <View style={styles.container}>
-      
       {/* --- ШАПКА ЭКРАНА (3 колонки) --- */}
       <View style={styles.topHeader}>
-        
-        {/* Левая колонка (Тема) */}
+        {/* Левая колонка (Настройки) */}
         <View style={styles.headerLeft}>
-          <ThemeToggle />
+          <SettingsButton onPress={onOpenSettings} />{' '}
+          {/* <-- Заменили компонент */}
         </View>
 
         {/* Центральная колонка (Заголовок) */}
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle} numberOfLines={1}>Галерея</Text>
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            Галерея
+          </Text>
         </View>
 
         {/* Правая колонка (Корзина) */}
         <View style={styles.headerRight}>
           <TrashButton onPress={onOpenTrash} />
         </View>
-
       </View>
 
       <TabBar
@@ -91,13 +99,19 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       />
 
       {displayedPhotos.length === 0 ? (
-        <EmptyState message={activeTab === 'all' ? 'Нет фотографий' : 'Нет скриншотов'} />
+        <EmptyState
+          message={activeTab === 'all' ? 'Нет фотографий' : 'Нет скриншотов'}
+        />
       ) : (
         <PhotoGrid photos={displayedPhotos} />
       )}
 
       {displayedPhotos.length > 0 && (
-        <TouchableOpacity style={styles.fab} onPress={handleStartCleaning} activeOpacity={0.8}>
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={handleStartCleaning}
+          activeOpacity={0.8}
+        >
           <Text style={styles.fabText}>
             Начать разбор ({displayedPhotos.length})
           </Text>
@@ -107,49 +121,50 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   )
 }
 
-const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: colors.background, 
-    paddingTop: 50 
-  },
-  topHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: SPACING.md,
-    marginBottom: SPACING.md,
-    height: 50,
-  },
-  headerLeft: {
-    flex: 1,
-    alignItems: 'flex-start', // Прижимаем луну влево
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center', // Центрируем заголовок
-    justifyContent: 'center',
-  },
-  headerRight: {
-    flex: 1,
-    alignItems: 'flex-end', // Прижимаем корзину вправо
-  },
-  headerTitle: { 
-    ...TYPOGRAPHY.title, 
-    color: colors.textMain 
-  },
-  fab: {
-    position: 'absolute',
-    bottom: 30,
-    alignSelf: 'center',
-    backgroundColor: colors.primary,
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.xl,
-    borderRadius: 30,
-    ...SHADOWS.medium,
-  },
-  fabText: { 
-    color: colors.white, 
-    fontSize: 18, 
-    fontWeight: 'bold' 
-  },
-})
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+      paddingTop: 50,
+    },
+    topHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: SPACING.md,
+      marginBottom: SPACING.md,
+      height: 50,
+    },
+    headerLeft: {
+      flex: 1,
+      alignItems: 'flex-start',
+    },
+    headerCenter: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    headerRight: {
+      flex: 1,
+      alignItems: 'flex-end',
+    },
+    headerTitle: {
+      ...TYPOGRAPHY.title,
+      color: colors.textMain,
+    },
+    fab: {
+      position: 'absolute',
+      bottom: 30,
+      alignSelf: 'center',
+      backgroundColor: colors.primary,
+      paddingVertical: SPACING.md,
+      paddingHorizontal: SPACING.xl,
+      borderRadius: 30,
+      ...SHADOWS.medium,
+    },
+    fabText: {
+      color: colors.white,
+      fontSize: 18,
+      fontWeight: 'bold',
+    },
+  })

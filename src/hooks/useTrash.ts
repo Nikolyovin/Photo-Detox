@@ -2,10 +2,10 @@ import { useState, useEffect, useCallback } from 'react'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { File } from 'expo-file-system'
 import { GalleryAsset } from '../types'
+import { useSettingsStore } from '../store/useSettingsStore'
 
 const TRASH_KEY = '@photo_detox_trash'
-const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
-// const SEVEN_DAYS_MS = 10 * 1000 // ВРЕМЕННО ДЛЯ ТЕСТА
+// Удалили константу SEVEN_DAYS_MS
 
 export interface TrashItem {
   photo: GalleryAsset
@@ -17,7 +17,11 @@ export const useTrash = () => {
   const [trash, setTrash] = useState<TrashItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
-  // 1. Сохранение (обернуто в useCallback)
+  // Получаем срок хранения из настроек
+  const trashRetentionDays = useSettingsStore(
+    (state) => state.trashRetentionDays,
+  )
+
   const saveTrash = useCallback(async (newTrash: TrashItem[]) => {
     try {
       setTrash(newTrash)
@@ -27,27 +31,28 @@ export const useTrash = () => {
     }
   }, [])
 
-  // 2. Физическое удаление (обернуто в useCallback)
-  const deletePhotosPhysically = useCallback(async (itemsToDelete: TrashItem[]) => {
-    if (itemsToDelete.length === 0) return
+  const deletePhotosPhysically = useCallback(
+    async (itemsToDelete: TrashItem[]) => {
+      if (itemsToDelete.length === 0) return
 
-    await Promise.all(
-      itemsToDelete.map(async (item) => {
-        if (!item.uri) return
+      await Promise.all(
+        itemsToDelete.map(async (item) => {
+          if (!item.uri) return
 
-        try {
-          const file = new File(item.uri)
-          if (file.exists) {
-            file.delete() // Синхронный метод удаления в новом API
+          try {
+            const file = new File(item.uri)
+            if (file.exists) {
+              file.delete()
+            }
+          } catch (error) {
+            console.error(`Не удалось удалить файл ${item.uri}:`, error)
           }
-        } catch (error) {
-          console.error(`Не удалось удалить файл ${item.uri}:`, error)
-        }
-      })
-    )
-  }, [])
+        }),
+      )
+    },
+    [],
+  )
 
-  // 3. Загрузка корзины (зависит от saveTrash и deletePhotosPhysically)
   const loadTrash = useCallback(async () => {
     try {
       const data = await AsyncStorage.getItem(TRASH_KEY)
@@ -55,11 +60,14 @@ export const useTrash = () => {
         const parsedTrash: TrashItem[] = JSON.parse(data)
         const now = Date.now()
 
+        // Вычисляем лимит в миллисекундах на основе настроек
+        const maxAgeMs = trashRetentionDays * 24 * 60 * 60 * 1000
+
         const expiredItems = parsedTrash.filter(
-          (item) => now - item.deletedAt > SEVEN_DAYS_MS
+          (item) => now - item.deletedAt > maxAgeMs,
         )
         const validItems = parsedTrash.filter(
-          (item) => now - item.deletedAt <= SEVEN_DAYS_MS
+          (item) => now - item.deletedAt <= maxAgeMs,
         )
 
         if (expiredItems.length > 0) {
@@ -75,40 +83,39 @@ export const useTrash = () => {
     } finally {
       setIsLoading(false)
     }
-  }, [deletePhotosPhysically, saveTrash])
+    // Добавили trashRetentionDays в зависимости, чтобы при смене настроек логика обновилась
+  }, [deletePhotosPhysically, saveTrash, trashRetentionDays])
 
-  // Запускаем при монтировании
   useEffect(() => {
     loadTrash()
   }, [loadTrash])
 
-  // 4. Добавление в корзину (используем функциональный setTrash, чтобы избежать stale state)
   const addToTrash = useCallback(async (photo: GalleryAsset) => {
     const newItem: TrashItem = {
       photo,
-      uri: photo.uri, // Теперь мы уверены, что uri есть!
+      uri: photo.uri,
       deletedAt: Date.now(),
     }
 
-    // Используем функциональное обновление, чтобы не зависеть от старого state
     setTrash((prevTrash) => {
       const newTrash = [newItem, ...prevTrash]
-      // Асинхронно сохраняем в память (fire and forget, чтобы не блокировать UI)
-      AsyncStorage.setItem(TRASH_KEY, JSON.stringify(newTrash)).catch(console.error)
+      AsyncStorage.setItem(TRASH_KEY, JSON.stringify(newTrash)).catch(
+        console.error,
+      )
       return newTrash
     })
   }, [])
 
-  // 5. Восстановление из корзины
   const removeFromTrash = useCallback(async (photoToRemove: GalleryAsset) => {
     setTrash((prevTrash) => {
       const newTrash = prevTrash.filter((item) => item.photo !== photoToRemove)
-      AsyncStorage.setItem(TRASH_KEY, JSON.stringify(newTrash)).catch(console.error)
+      AsyncStorage.setItem(TRASH_KEY, JSON.stringify(newTrash)).catch(
+        console.error,
+      )
       return newTrash
     })
   }, [])
 
-  // 6. Очистка корзины
   const emptyTrash = useCallback(async () => {
     try {
       if (trash.length > 0) {
