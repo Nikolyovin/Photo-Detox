@@ -121,7 +121,6 @@ const AppContent = () => {
 
       {screen === 'trash' && <TrashScreen onBack={handleBackFromTrash} />}
 
-      {/* <-- Добавили рендер экрана настроек */}
       {screen === 'settings' && (
         <SettingsScreen onBack={handleBackFromSettings} />
       )}

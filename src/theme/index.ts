@@ -13,7 +13,7 @@ export const lightColors = {
   white: '#FFFFFF',
   black: '#000000',
   shadow: '#000000',
-  
+  border: '#E2E8F0',
   tabBackground: '#EFEFF4', 
   buttonBackground: '#F0F0F0',
   snackbar: '#333333',
@@ -35,10 +35,10 @@ export const darkColors = {
   white: '#FFFFFF',
   black: '#000000',
   shadow: '#000000',
-  
+  border: '#333333',
   tabBackground: '#1E1E1E', 
   buttonBackground: '#2C2C2E',
-  snackbar: '#E5E5EA', // Светлая плашка на темном фоне
+  snackbar: '#2C2C2E', // Светлая плашка на темном фоне
   inactiveDot: '#48484A',
   
   overlayLight: 'rgba(44, 44, 46, 0.9)',
@@ -70,6 +70,7 @@ export const TYPOGRAPHY = {
   subtitle: { fontSize: 18, fontWeight: '600' as const },
   body: { fontSize: 16, fontWeight: '400' as const },
   button: { fontSize: 16, fontWeight: '700' as const },
+  caption: { fontSize: 14, fontWeight: '500' as const },
 }
 
 export const SHADOWS = {

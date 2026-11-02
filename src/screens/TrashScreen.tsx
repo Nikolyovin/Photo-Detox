@@ -55,15 +55,15 @@ export const TrashScreen: React.FC<TrashScreenProps> = ({ onBack }) => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={onBack}>
-          <Text style={styles.backButton}>← Назад</Text>
+        <TouchableOpacity onPress={onBack} style={styles.backBtn}>
+          <Text style={styles.backText}>← Назад</Text>
         </TouchableOpacity>
         
-        <Text style={styles.headerText}>Корзина ({trash.length})</Text>
+        <Text style={styles.headerTitle}>Корзина ({trash.length})</Text>
 
         {trash.length > 0 ? (
-          <TouchableOpacity onPress={handleClearTrash}>
-            <Text style={styles.clearButton}>Очистить</Text>
+          <TouchableOpacity onPress={handleClearTrash} style={styles.clearBtn}>
+            <Text style={styles.clearText}>Очистить</Text>
           </TouchableOpacity>
         ) : (
           <View style={styles.placeholder} />
@@ -98,11 +98,14 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingHorizontal: SPACING.lg,
     alignItems: 'center',
     marginBottom: SPACING.md,
+    height: 50, // <-- Выровняли высоту
   },
-  backButton: { fontSize: 18, color: colors.primary, fontWeight: '500' },
-  headerText: { fontSize: 18, fontWeight: 'bold', color: colors.textMain },
-  clearButton: { fontSize: 16, color: colors.danger, fontWeight: '600' },
-  placeholder: { width: 60 },
+  backBtn: { width: 80 }, // <-- Синхронизировали имя
+  backText: { fontSize: 18, color: colors.primary, fontWeight: '500' },
+  headerTitle: { fontSize: 22, fontWeight: 'bold', color: colors.textMain },
+  clearBtn: { width: 80, alignItems: 'flex-end' }, // <-- Синхронизировали имя
+  clearText: { fontSize: 16, color: colors.danger, fontWeight: '600' },
+  placeholder: { width: 80 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyText: { ...TYPOGRAPHY.subtitle, color: colors.textSecondary },
   imageWrapper: { width: imageSize, height: imageSize, padding: 2 },
