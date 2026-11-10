@@ -1,5 +1,13 @@
 import React, { useMemo } from 'react'
-import { View, Text, StyleSheet, TouchableOpacity, Switch, Linking, ScrollView } from 'react-native'
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Switch,
+  Linking,
+  ScrollView,
+} from 'react-native'
 import { useTheme } from '../theme/ThemeContext'
 import { useSettingsStore } from '../store/useSettingsStore'
 import { SPACING, TYPOGRAPHY, ThemeColors } from '../theme'
@@ -15,7 +23,9 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
   const styles = useMemo(() => createStyles(colors), [colors])
 
   const openLink = (url: string) => {
-    Linking.openURL(url).catch((err) => console.error("Couldn't load page", err))
+    Linking.openURL(url).catch((err) =>
+      console.error("Couldn't load page", err),
+    )
   }
 
   return (
@@ -46,10 +56,19 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
             {[3, 7, 14, 30].map((days) => (
               <TouchableOpacity
                 key={days}
-                style={[styles.pill, trashRetentionDays === days && styles.pillActive]}
+                style={[
+                  styles.pill,
+                  trashRetentionDays === days && styles.pillActive,
+                ]}
                 onPress={() => setTrashRetentionDays(days)}
               >
-                <Text style={[styles.pillText, trashRetentionDays === days && styles.pillTextActive]}>
+                <Text
+                  style={[
+                    styles.pillText,
+                    trashRetentionDays === days && styles.pillTextActive,
+                  ]}
+                  numberOfLines={1} // 🚀 Запрещаем перенос текста
+                >
                   {days} дн.
                 </Text>
               </TouchableOpacity>
@@ -58,76 +77,108 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
         </View>
 
         <Text style={styles.sectionTitle}>О приложении</Text>
-        <TouchableOpacity style={styles.linkRow} onPress={() => openLink('https://nikolyovin.github.io/photo-detox-privacy/')}>
+        <TouchableOpacity
+          style={styles.linkRow}
+          onPress={() =>
+            openLink('https://nikolyovin.github.io/photo-detox-privacy/')
+          }
+        >
           <Text style={styles.linkText}>Политика конфиденциальности</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.linkRow} onPress={() => openLink('https://github.com/Nikolyovin/Photo-Detox')}>
+        <TouchableOpacity
+          style={styles.linkRow}
+          onPress={() => openLink('https://github.com/Nikolyovin/Photo-Detox')}
+        >
           <Text style={styles.linkText}>Исходный код (GitHub)</Text>
         </TouchableOpacity>
-        
+
         <Text style={styles.versionText}>
-          Версия {Constants.expoConfig?.version || '1.1.0'}
+          Версия {Constants.expoConfig?.version || '1.2.1'}
         </Text>
       </ScrollView>
     </View>
   )
 }
 
-const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background, paddingTop: 50 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: SPACING.lg,
-    marginBottom: SPACING.md,
-    height: 50,
-  },
-  backBtn: { width: 80 },
-  backText: { fontSize: 18, color: colors.primary, fontWeight: '500' },
-  headerTitle: { ...TYPOGRAPHY.title, color: colors.textMain, fontSize: 22 },
-  placeholder: { width: 80 },
-  content: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.xl },
-  sectionTitle: {
-    ...TYPOGRAPHY.subtitle,
-    color: colors.textSecondary,
-    fontSize: 14,
-    textTransform: 'uppercase',
-    marginTop: SPACING.lg,
-    marginBottom: SPACING.sm,
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: colors.card,
-    padding: SPACING.md,
-    borderRadius: 16,
-  },
-  column: {
-    backgroundColor: colors.card,
-    padding: SPACING.md,
-    borderRadius: 16,
-  },
-  rowLabel: { ...TYPOGRAPHY.body, color: colors.textMain, fontSize: 16 },
-  pillsContainer: { flexDirection: 'row', marginTop: SPACING.md, gap: SPACING.sm, flexWrap: 'wrap' },
-  pill: {
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.md,
-    borderRadius: 20,
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  pillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  pillText: { ...TYPOGRAPHY.body, color: colors.textMain },
-  pillTextActive: { color: colors.white, fontWeight: 'bold' },
-  linkRow: {
-    backgroundColor: colors.card,
-    padding: SPACING.md,
-    borderRadius: 16,
-    marginBottom: SPACING.sm,
-  },
-  linkText: { ...TYPOGRAPHY.body, color: colors.primary },
-  versionText: { ...TYPOGRAPHY.caption, color: colors.textSecondary, textAlign: 'center', marginTop: SPACING.xl },
-})
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background, paddingTop: 40 }, // 🚀 Уменьшили верхний отступ, как в других экранах
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: SPACING.lg,
+      marginBottom: SPACING.md,
+      height: 50,
+    },
+    backBtn: { width: 80 },
+    backText: { fontSize: 18, color: colors.primary, fontWeight: '500' },
+    headerTitle: { ...TYPOGRAPHY.title, color: colors.textMain, fontSize: 22 },
+    placeholder: { width: 80 },
+    content: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.xl },
+    sectionTitle: {
+      ...TYPOGRAPHY.subtitle,
+      color: colors.textSecondary,
+      fontSize: 14,
+      textTransform: 'uppercase',
+      marginTop: SPACING.lg,
+      marginBottom: SPACING.sm,
+    },
+    row: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      backgroundColor: colors.card,
+      padding: SPACING.md,
+      borderRadius: 16,
+    },
+    column: {
+      backgroundColor: colors.card,
+      padding: SPACING.md,
+      borderRadius: 16,
+    },
+    rowLabel: { ...TYPOGRAPHY.body, color: colors.textMain, fontSize: 16 },
+
+    // 🚀 ИСПРАВЛЕННЫЕ СТИЛИ ДЛЯ КНОПОК
+    pillsContainer: {
+      flexDirection: 'row',
+      marginTop: SPACING.md,
+      justifyContent: 'space-between', // Равномерно распределяем
+      // Убрали flexWrap и gap
+    },
+    pill: {
+      flex: 1, // 🚀 Каждая кнопка занимает равную часть ширины
+      marginHorizontal: 3, // 🚀 Небольшой отступ между ними
+      paddingVertical: SPACING.sm,
+      borderRadius: 20,
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: 'center', // Центрируем текст
+    },
+    pillActive: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    pillText: {
+      ...TYPOGRAPHY.body,
+      color: colors.textMain,
+      fontSize: 13, // 🚀 Чуть уменьшили, чтобы "30 дн." точно влезло
+      fontWeight: '500',
+    },
+    pillTextActive: { color: colors.white, fontWeight: 'bold' },
+
+    linkRow: {
+      backgroundColor: colors.card,
+      padding: SPACING.md,
+      borderRadius: 16,
+      marginBottom: SPACING.sm,
+    },
+    linkText: { ...TYPOGRAPHY.body, color: colors.primary },
+    versionText: {
+      ...TYPOGRAPHY.caption,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      marginTop: SPACING.xl,
+    },
+  })
