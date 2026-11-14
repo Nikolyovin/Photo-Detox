@@ -1,78 +1,93 @@
-import { useEffect, useState, useCallback } from 'react'
-import * as MediaLibrary from 'expo-media-library'
-import { Query, AssetField, MediaType } from 'expo-media-library'
-import { File } from 'expo-file-system'
-import { GalleryAsset } from '../types'
+import { useEffect, useState, useCallback } from "react";
+import * as MediaLibrary from "expo-media-library";
+import { Query, AssetField, MediaType } from "expo-media-library";
+import { File } from "expo-file-system";
+import { GalleryAsset } from "../types";
+
+const PAGE_SIZE = 200;
+const MAX_PHOTOS = 20000;
 
 export const useGallery = () => {
-  const [allPhotos, setAllPhotos] = useState<GalleryAsset[]>([])
-  const [hasPermission, setHasPermission] = useState<boolean>(false)
-  const [isLoading, setIsLoading] = useState<boolean>(true)
+  const [allPhotos, setAllPhotos] = useState<GalleryAsset[]>([]);
+  const [hasPermission, setHasPermission] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // 1. Оборачиваем loadPhotos в useCallback, чтобы функция не пересоздавалась
   const loadPhotos = useCallback(async () => {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
-      const assets = await new Query()
-        .eq(AssetField.MEDIA_TYPE, MediaType.IMAGE)
-        .limit(500)
-        .orderBy({ key: AssetField.CREATION_TIME, ascending: false })
-        .exe()
+      const collected: GalleryAsset[] = [];
+      let offset = 0;
+      let hasMore = true;
 
-      // 2. Достаем URI без использования any, где это возможно
-      const assetsWithUri = await Promise.all(
-        assets.map(async (asset) => {
-          let uri = (asset as unknown as { uri?: string }).uri
-          
-          if (!uri && typeof (asset as unknown as { getUri?: () => Promise<string> }).getUri === 'function') {
-            uri = await (asset as unknown as { getUri: () => Promise<string> }).getUri()
-          }
-          
-          return { ...asset, uri: uri || '' } as GalleryAsset
-        })
-      )
+      while (hasMore && collected.length < MAX_PHOTOS) {
+        const assets = await new Query()
+          .eq(AssetField.MEDIA_TYPE, MediaType.IMAGE)
+          .limit(PAGE_SIZE)
+          .offset(offset)
+          .orderBy({ key: AssetField.CREATION_TIME, ascending: false })
+          .exe();
 
-      // 3. Фильтруем битые файлы (которых больше нет на диске)
-      const validAssets = assetsWithUri.filter((asset) => {
-        if (!asset.uri) return false
-        try {
-          const file = new File(asset.uri)
-          return file.exists
-        } catch (e) {
-          return false
+        if (!assets || assets.length === 0) {
+          hasMore = false;
+          break;
         }
-      })
 
-      setAllPhotos(validAssets)
+        const processed = await Promise.all(
+          assets.map(async (asset) => {
+            let uri = (asset as unknown as { uri?: string }).uri;
+            if (!uri && typeof (asset as any).getUri === "function") {
+              try {
+                uri = await (asset as any).getUri();
+              } catch {
+                uri = "";
+              }
+            }
+            if (!uri) return null;
+
+            // ВАША СТАРАЯ ПРОВЕРКА: Отсеиваем файлы, которых нет на диске
+            try {
+              const file = new File(uri);
+              if (!file.exists) return null;
+            } catch (e) {
+              return null;
+            }
+
+            return { ...asset, uri } as GalleryAsset;
+          }),
+        );
+
+        collected.push(
+          ...processed.filter((a): a is GalleryAsset => a !== null),
+        );
+
+        if (assets.length < PAGE_SIZE) {
+          hasMore = false;
+        } else {
+          offset += PAGE_SIZE;
+        }
+      }
+
+      setAllPhotos(collected);
     } catch (error) {
-      console.error('Ошибка загрузки фото:', error)
+      console.error("Ошибка загрузки фото:", error);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }, []) // Зависимостей нет, функция создается один раз
+  }, []);
 
-  // 4. Оборачиваем askPermission и добавляем loadPhotos в зависимости
   const askPermission = useCallback(async () => {
-    const { status } = await MediaLibrary.requestPermissionsAsync()
-    if (status === 'granted') {
-      setHasPermission(true)
-      await loadPhotos()
+    const { status } = await MediaLibrary.requestPermissionsAsync();
+    if (status === "granted") {
+      setHasPermission(true);
+      await loadPhotos();
     } else {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }, [loadPhotos])
+  }, [loadPhotos]);
 
-  // 5. Теперь useEffect знает про askPermission и не будет ругаться на линтер
   useEffect(() => {
-    askPermission()
-  }, [askPermission])
+    askPermission();
+  }, [askPermission]);
 
-  return {
-    allPhotos,
-    hasPermission,
-    isLoading,
-    askPermission,
-    loadPhotos,
-    // getFilteredPhotos мы убрали, так как фильтруем прямо в HomeScreen
-  }
-}
+  return { allPhotos, hasPermission, isLoading, askPermission, loadPhotos };
+};
